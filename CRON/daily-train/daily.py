@@ -181,7 +181,9 @@ def main(df_input, df_current, df_hist,
     print "fitted_models_hist dtypes:\n", fitted_models_hist.dtypes
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
-                                                  fitted_model_hist=fitted_models_hist, verbose=False)
+                                                  fitted_model_hist=fitted_models_hist[["pt_posterior_x_Nt",
+                                                                                        "topic_id", "user_id"]],
+                                                  verbose=False)
     # ~~~ filter is general and specific topic ~~~
     # the idea is just we need to rerank every topic according
     # user_id and and is_general by p0_posterior
@@ -330,8 +332,8 @@ def BQPreprocess(cpu, date_generated, client, query_fit):
                     logger.info("processing batch-%d", ix)
                     # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
                     logger.info("creating list history data...")
-                    lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
-                    # lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
+                    # lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
+                    lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
 
                     logger.info("call history data...")
                     h_frame = mh.loadDSHistory(lhistory)
@@ -468,7 +470,14 @@ if __name__ == "__main__":
                     """ + transform_table['topid_columnname'] + """ as topic_id,
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
                     """ + transform_table['topiccount_columnname'] + """ as num
-                    FROM `""" + transform_table['db_table_name'] + """` """
+                    FROM `""" + transform_table['db_table_name'] + """` CDH
+                    WHERE CDH.click_user_alias_id 
+                                IN (SELECT UTCL.user_alias_id AS user_alias_id
+                                    FROM `topic_recommender.users_total_click` UTCL
+                                    GROUP BY 1
+                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
+                                    )
+                    """
 
         project_id = config["project_id"]
         
@@ -486,11 +495,18 @@ if __name__ == "__main__":
                         FROM `kumparan-data.topic_recommender.click_distribution_daily`
                     """
 
-        query_transform = """ SELECT click_user_alias_id as user_id,
+        query_transform = """
+                            SELECT click_user_alias_id as user_id,
                               click_topic_id as topic_id,
                               click_topic_is_general as is_general,
                               click_topic_count as num
-                              FROM `kumparan-data.topic_recommender.click_distribution_hourly`
+                            FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
+                            WHERE CDH.click_user_alias_id 
+                                IN (SELECT UTCL.user_alias_id AS user_alias_id
+                                    FROM `topic_recommender.users_total_click` UTCL
+                                    GROUP BY 1
+                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
+                                    )
                           """
 
     if G <= 0:
@@ -517,8 +533,8 @@ if __name__ == "__main__":
     logger.info("using start date: %s", start)
     logger.info("using end date: %s", date_1_days_ago.strftime('%Y-%m-%d'))
 
-    # date_current =  datetime.datetime.now().date()
-    # args.cd = None
+    date_current =  datetime.datetime.now().date()
+    args.cd = None
     preprocess = preprocess(args.cpu, args.cd, query_fit, date_generated)
     if preprocess:
         big_frame, current_frame, big_frame_hist = preprocess

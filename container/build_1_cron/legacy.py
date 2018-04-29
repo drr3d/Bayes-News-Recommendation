@@ -395,7 +395,14 @@ if __name__ == "__main__":
                     """ + transform_table['topid_columnname'] + """ as topic_id,
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
                     """ + transform_table['topiccount_columnname'] + """ as num
-                    FROM `""" + transform_table['db_table_name'] + """` """
+                    FROM `""" + transform_table['db_table_name'] + """` CDH
+                    WHERE CDH.click_user_alias_id 
+                                IN (SELECT UTCL.user_alias_id AS user_alias_id
+                                    FROM `topic_recommender.users_total_click` UTCL
+                                    GROUP BY 1
+                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
+                                    )
+                    """
 
         project_id = config["project_id"]
         N = config["N"]
@@ -414,11 +421,18 @@ if __name__ == "__main__":
                         FROM `kumparan-data.topic_recommender.click_distribution_daily`
                     """
 
-        query_transform = """ SELECT click_user_alias_id as user_id,
-                              click_topic_id as topic_id, 
+        query_transform = """
+                            SELECT click_user_alias_id as user_id,
+                              click_topic_id as topic_id,
                               click_topic_is_general as is_general,
                               click_topic_count as num
-                              FROM `kumparan-data.topic_recommender.click_distribution_hourly`
+                            FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
+                            WHERE CDH.click_user_alias_id 
+                                IN (SELECT UTCL.user_alias_id AS user_alias_id
+                                    FROM `topic_recommender.users_total_click` UTCL
+                                    GROUP BY 1
+                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
+                                    )
                           """
     if N <= 0:
         logger.DEBUG("N cannot smaller or equal to 0...")

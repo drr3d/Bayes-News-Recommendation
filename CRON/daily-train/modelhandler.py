@@ -74,7 +74,7 @@ def loadDSHistory(key_list, kinds='topic_recomendation_history'):
     # result.append(client.get_multi(keys=keylist))
     # yield client.get_multi(keys=keys[:1000])
 
-    cpu = 6
+    cpu = 10
     pool = mp.Pool(processes=cpu) 
     multprocessA = [pool.apply_async(_getBig, args=(keylist, )) for keylist in index_list]
 

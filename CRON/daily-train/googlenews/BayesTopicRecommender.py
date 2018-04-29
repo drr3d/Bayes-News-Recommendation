@@ -252,9 +252,6 @@ class GBayesTopicRecommender(object):
         fitted_models = fitted_models.groupby(['user_id',
                                                'topic_id'])['pt_posterior_x_Nt'].agg('sum')
         fitted_models = fitted_models.reset_index()
-        fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
-                                                                            cur_result2.p0_cat_ci)),
-                                                                   na_action=0.)
 
         # its called smoothed because we add certain value of virtual click
         fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
@@ -266,7 +263,6 @@ class GBayesTopicRecommender(object):
             print "Fitted models before concat:\n", fitted_models.head(5)
             print "len of current fitted models: %d" % len(fitted_models)
             print "len of history fitted models: %d" % len(fitted_model_hist)
-            fitted_model_hist = fitted_model_hist[["p0_cat_ci","pt_posterior_x_Nt", "smoothed_pt_posterior","topic_id","user_id"]]
             
             fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
             print "len of fitted models after concat: %d" % len(fitted_models)
@@ -276,14 +272,15 @@ class GBayesTopicRecommender(object):
             fitted_models = fitted_models.reset_index()
             
             print "Fitted models after concat:\n", fitted_models.head(5)
-            print "Simplifying current fitted models..."
-            fitted_models = fitted_models[["p0_cat_ci","pt_posterior_x_Nt",
-                                           "smoothed_pt_posterior","topic_id","user_id"]]
 
             # its called smoothed because we add certain value of virtual click
             fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
             print "Fitted models after concat-simplify:\n", fitted_models.head(5)
             print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
+
+        fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
+                                                                            cur_result2.p0_cat_ci)),
+                                                                            na_action=0.)
 
         print fitted_models.head(10)
         # ~~~~
