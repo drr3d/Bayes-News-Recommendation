@@ -1,0 +1,655 @@
+2018-04-27 06:49:43,993 - memory_profile2_log - INFO - Generating date range with N: 3
+2018-04-27 06:49:43,997 - memory_profile2_log - INFO - date_generated: 
+2018-04-27 06:49:43,999 - memory_profile2_log - INFO -  
+2018-04-27 06:49:44,000 - memory_profile2_log - INFO - [datetime.datetime(2018, 4, 12, 0, 0), datetime.datetime(2018, 4, 13, 0, 0), datetime.datetime(2018, 4, 14, 0, 0)]
+2018-04-27 06:49:44,000 - memory_profile2_log - INFO - 
+
+2018-04-27 06:49:44,000 - memory_profile2_log - INFO - using current date: 2018-04-15
+2018-04-27 06:49:44,000 - memory_profile2_log - INFO - using start date: 2018-04-12 00:00:00
+2018-04-27 06:49:44,002 - memory_profile2_log - INFO - using end date: 2018-04-14
+2018-04-27 06:49:44,128 - memory_profile2_log - INFO - Starting data fetch iterative...
+2018-04-27 06:49:44,130 - memory_profile2_log - INFO - Collecting training data for date: 2018-04-12
+2018-04-27 06:55:32,078 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 06:55:32,079 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 06:55:32,081 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 06:55:32,082 - memory_profile2_log - INFO -     54     86.4 MiB     86.4 MiB   @profile
+
+2018-04-27 06:55:32,082 - memory_profile2_log - INFO -     55                             def load_bigquery(client, query, job_config):
+
+2018-04-27 06:55:32,085 - memory_profile2_log - INFO -     56                                 """
+
+2018-04-27 06:55:32,085 - memory_profile2_log - INFO -     57                                     Bigquery to dataframe
+
+2018-04-27 06:55:32,086 - memory_profile2_log - INFO -     58                                 """
+
+2018-04-27 06:55:32,088 - memory_profile2_log - INFO -     59     86.4 MiB      0.0 MiB       job_config.use_legacy_sql = False
+
+2018-04-27 06:55:32,088 - memory_profile2_log - INFO -     60     86.4 MiB      0.0 MiB       job_config.allowLargeResults = True
+
+2018-04-27 06:55:32,089 - memory_profile2_log - INFO -     61                             
+
+2018-04-27 06:55:32,091 - memory_profile2_log - INFO -     62    394.1 MiB    307.8 MiB       df = client.query(query, job_config=job_config).result().to_dataframe()
+
+2018-04-27 06:55:32,092 - memory_profile2_log - INFO -     63    394.1 MiB      0.0 MiB       return df
+
+2018-04-27 06:55:32,092 - memory_profile2_log - INFO - 
+
+
+2018-04-27 06:55:32,094 - memory_profile2_log - INFO - getting total: 462579 training data(genuine interest) for date: 2018-04-12
+2018-04-27 06:55:32,095 - memory_profile2_log - INFO - Collecting training data for date: 2018-04-13
+2018-04-27 06:59:58,224 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 06:59:58,226 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 06:59:58,226 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 06:59:58,229 - memory_profile2_log - INFO -     54    394.1 MiB    394.1 MiB   @profile
+
+2018-04-27 06:59:58,230 - memory_profile2_log - INFO -     55                             def load_bigquery(client, query, job_config):
+
+2018-04-27 06:59:58,232 - memory_profile2_log - INFO -     56                                 """
+
+2018-04-27 06:59:58,233 - memory_profile2_log - INFO -     57                                     Bigquery to dataframe
+
+2018-04-27 06:59:58,233 - memory_profile2_log - INFO -     58                                 """
+
+2018-04-27 06:59:58,236 - memory_profile2_log - INFO -     59    394.1 MiB      0.0 MiB       job_config.use_legacy_sql = False
+
+2018-04-27 06:59:58,237 - memory_profile2_log - INFO -     60    394.1 MiB      0.0 MiB       job_config.allowLargeResults = True
+
+2018-04-27 06:59:58,239 - memory_profile2_log - INFO -     61                             
+
+2018-04-27 06:59:58,240 - memory_profile2_log - INFO -     62    493.4 MiB     99.3 MiB       df = client.query(query, job_config=job_config).result().to_dataframe()
+
+2018-04-27 06:59:58,240 - memory_profile2_log - INFO -     63    493.4 MiB      0.0 MiB       return df
+
+2018-04-27 06:59:58,243 - memory_profile2_log - INFO - 
+
+
+2018-04-27 06:59:58,244 - memory_profile2_log - INFO - getting total: 361145 training data(genuine interest) for date: 2018-04-13
+2018-04-27 06:59:58,246 - memory_profile2_log - INFO - Collecting training data for date: 2018-04-14
+2018-04-27 07:03:07,543 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 07:03:07,545 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 07:03:07,546 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 07:03:07,548 - memory_profile2_log - INFO -     54    493.4 MiB    493.4 MiB   @profile
+
+2018-04-27 07:03:07,549 - memory_profile2_log - INFO -     55                             def load_bigquery(client, query, job_config):
+
+2018-04-27 07:03:07,549 - memory_profile2_log - INFO -     56                                 """
+
+2018-04-27 07:03:07,551 - memory_profile2_log - INFO -     57                                     Bigquery to dataframe
+
+2018-04-27 07:03:07,552 - memory_profile2_log - INFO -     58                                 """
+
+2018-04-27 07:03:07,552 - memory_profile2_log - INFO -     59    493.4 MiB      0.0 MiB       job_config.use_legacy_sql = False
+
+2018-04-27 07:03:07,555 - memory_profile2_log - INFO -     60    493.4 MiB      0.0 MiB       job_config.allowLargeResults = True
+
+2018-04-27 07:03:07,556 - memory_profile2_log - INFO -     61                             
+
+2018-04-27 07:03:07,558 - memory_profile2_log - INFO -     62    562.4 MiB     69.0 MiB       df = client.query(query, job_config=job_config).result().to_dataframe()
+
+2018-04-27 07:03:07,559 - memory_profile2_log - INFO -     63    562.4 MiB      0.0 MiB       return df
+
+2018-04-27 07:03:07,559 - memory_profile2_log - INFO - 
+
+
+2018-04-27 07:03:07,561 - memory_profile2_log - INFO - getting total: 253995 training data(genuine interest) for date: 2018-04-14
+2018-04-27 07:03:07,562 - memory_profile2_log - INFO - len datalist: 3
+2018-04-27 07:03:07,563 - memory_profile2_log - INFO - All data fetch iterative done!!
+2018-04-27 07:03:07,677 - memory_profile2_log - INFO - Collecting training data(current date interest) using argument: 2018-04-15
+2018-04-27 07:05:58,413 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 07:05:58,418 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 07:05:58,420 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 07:05:58,421 - memory_profile2_log - INFO -     54    581.6 MiB    581.6 MiB   @profile
+
+2018-04-27 07:05:58,423 - memory_profile2_log - INFO -     55                             def load_bigquery(client, query, job_config):
+
+2018-04-27 07:05:58,424 - memory_profile2_log - INFO -     56                                 """
+
+2018-04-27 07:05:58,424 - memory_profile2_log - INFO -     57                                     Bigquery to dataframe
+
+2018-04-27 07:05:58,426 - memory_profile2_log - INFO -     58                                 """
+
+2018-04-27 07:05:58,427 - memory_profile2_log - INFO -     59    581.6 MiB      0.0 MiB       job_config.use_legacy_sql = False
+
+2018-04-27 07:05:58,431 - memory_profile2_log - INFO -     60    581.6 MiB      0.0 MiB       job_config.allowLargeResults = True
+
+2018-04-27 07:05:58,433 - memory_profile2_log - INFO -     61                             
+
+2018-04-27 07:05:58,434 - memory_profile2_log - INFO -     62    679.4 MiB     97.8 MiB       df = client.query(query, job_config=job_config).result().to_dataframe()
+
+2018-04-27 07:05:58,434 - memory_profile2_log - INFO -     63    679.4 MiB      0.0 MiB       return df
+
+2018-04-27 07:05:58,436 - memory_profile2_log - INFO - 
+
+
+2018-04-27 07:05:58,437 - memory_profile2_log - INFO - getting total: 230425 training data(current date interest) for date: 2018-04-15
+2018-04-27 07:05:58,446 - memory_profile2_log - INFO - loading time of: 1308144 total genuine-current interest data ~ take 974.318s
+2018-04-27 07:05:58,457 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 07:05:58,457 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 07:05:58,460 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 07:05:58,463 - memory_profile2_log - INFO -    222     86.2 MiB     86.2 MiB   @profile
+
+2018-04-27 07:05:58,464 - memory_profile2_log - INFO -    223                             def preprocess(loadmp, cpu, cd, query_fit, date_generated):
+
+2018-04-27 07:05:58,464 - memory_profile2_log - INFO -    224     86.4 MiB      0.1 MiB       bq_client = bigquery.Client()
+
+2018-04-27 07:05:58,466 - memory_profile2_log - INFO -    225     86.4 MiB      0.0 MiB       job_config = bigquery.QueryJobConfig()
+
+2018-04-27 07:05:58,467 - memory_profile2_log - INFO -    226                             
+
+2018-04-27 07:05:58,467 - memory_profile2_log - INFO -    227                                 # ~~~ Begin collecting data ~~~
+
+2018-04-27 07:05:58,467 - memory_profile2_log - INFO -    228     86.4 MiB      0.0 MiB       t0 = time.time()
+
+2018-04-27 07:05:58,470 - memory_profile2_log - INFO -    229     86.4 MiB      0.0 MiB       datalist = []
+
+2018-04-27 07:05:58,471 - memory_profile2_log - INFO -    230                             
+
+2018-04-27 07:05:58,473 - memory_profile2_log - INFO -    231    493.4 MiB      0.0 MiB       def _getBig(procdate):
+
+2018-04-27 07:05:58,473 - memory_profile2_log - INFO -    232    493.4 MiB      0.0 MiB           logger.info("Collecting training data for date: %s", procdate)
+
+2018-04-27 07:05:58,474 - memory_profile2_log - INFO -    233                                     # ~ get genuine news interest ~
+
+2018-04-27 07:05:58,474 - memory_profile2_log - INFO -    234    493.4 MiB      0.0 MiB           query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+
+2018-04-27 07:05:58,476 - memory_profile2_log - INFO -    235                             
+
+2018-04-27 07:05:58,476 - memory_profile2_log - INFO -    236                                     # safe handling of query parameter
+
+2018-04-27 07:05:58,477 - memory_profile2_log - INFO -    237                                     query_params = [
+
+2018-04-27 07:05:58,479 - memory_profile2_log - INFO -    238    493.4 MiB      0.0 MiB               bigquery.ScalarQueryParameter('start_date', 'STRING', procdate)
+
+2018-04-27 07:05:58,480 - memory_profile2_log - INFO -    239                                     ]
+
+2018-04-27 07:05:58,483 - memory_profile2_log - INFO -    240                             
+
+2018-04-27 07:05:58,483 - memory_profile2_log - INFO -    241    493.4 MiB      0.0 MiB           job_config.query_parameters = query_params
+
+2018-04-27 07:05:58,484 - memory_profile2_log - INFO -    242    562.4 MiB    476.0 MiB           temp_df = load_bigquery(bq_client, query_fit + query_fit_where, job_config)
+
+2018-04-27 07:05:58,484 - memory_profile2_log - INFO -    243                             
+
+2018-04-27 07:05:58,487 - memory_profile2_log - INFO -    244    562.4 MiB      0.0 MiB           if temp_df.empty:
+
+2018-04-27 07:05:58,489 - memory_profile2_log - INFO -    245                                         logger.info("%s data is empty!", procdate)
+
+2018-04-27 07:05:58,489 - memory_profile2_log - INFO -    246                                         return None
+
+2018-04-27 07:05:58,490 - memory_profile2_log - INFO -    247                                     else:
+
+2018-04-27 07:05:58,490 - memory_profile2_log - INFO -    248    562.4 MiB      0.0 MiB               logger.info("getting total: %d training data(genuine interest) for date: %s" % (len(temp_df), procdate))
+
+2018-04-27 07:05:58,490 - memory_profile2_log - INFO -    249    562.4 MiB      0.0 MiB               if loadmp:
+
+2018-04-27 07:05:58,494 - memory_profile2_log - INFO -    250                                             logger.info("Exiting: %s", mp.current_process().name)
+
+2018-04-27 07:05:58,496 - memory_profile2_log - INFO -    251    562.4 MiB      0.0 MiB               return temp_df
+
+2018-04-27 07:05:58,496 - memory_profile2_log - INFO -    252                             
+
+2018-04-27 07:05:58,497 - memory_profile2_log - INFO -    253     86.4 MiB      0.0 MiB       if loadmp:
+
+2018-04-27 07:05:58,497 - memory_profile2_log - INFO -    254                                     logger.info("Starting data fetch multiprocess..")
+
+2018-04-27 07:05:58,499 - memory_profile2_log - INFO -    255                                     logger.info("number of process: %d", len(date_generated))
+
+2018-04-27 07:05:58,500 - memory_profile2_log - INFO -    256                             
+
+2018-04-27 07:05:58,500 - memory_profile2_log - INFO -    257                                     pool = mp.Pool(processes=cpu)
+
+2018-04-27 07:05:58,500 - memory_profile2_log - INFO -    258                                     # multprocessA = [pool.apply(_getBig, args=(ndate.strftime("%Y-%m-%d"), )) for ndate in date_generated]
+
+2018-04-27 07:05:58,505 - memory_profile2_log - INFO -    259                                     multprocessA = [pool.apply_async(_getBig, args=(ndate.strftime("%Y-%m-%d"), )) for ndate in date_generated]
+
+2018-04-27 07:05:58,506 - memory_profile2_log - INFO -    260                                     output_multprocessA = [p.get() for p in multprocessA]
+
+2018-04-27 07:05:58,509 - memory_profile2_log - INFO -    261                             
+
+2018-04-27 07:05:58,509 - memory_profile2_log - INFO -    262                                     for m in output_multprocessA:
+
+2018-04-27 07:05:58,509 - memory_profile2_log - INFO -    263                                         if m is not None:
+
+2018-04-27 07:05:58,509 - memory_profile2_log - INFO -    264                                             if not m.empty:
+
+2018-04-27 07:05:58,513 - memory_profile2_log - INFO -    265                                                 datalist.append(m)
+
+2018-04-27 07:05:58,515 - memory_profile2_log - INFO -    266                             
+
+2018-04-27 07:05:58,516 - memory_profile2_log - INFO -    267                                     logger.info("len datalist: %d", len(datalist))
+
+2018-04-27 07:05:58,516 - memory_profile2_log - INFO -    268                                     logger.info("All data fetch multiprocess done!!")
+
+2018-04-27 07:05:58,517 - memory_profile2_log - INFO -    269                                 else:
+
+2018-04-27 07:05:58,519 - memory_profile2_log - INFO -    270     86.4 MiB      0.0 MiB           logger.info("Starting data fetch iterative...")
+
+2018-04-27 07:05:58,520 - memory_profile2_log - INFO -    271    562.4 MiB      0.0 MiB           for ndate in date_generated:
+
+2018-04-27 07:05:58,522 - memory_profile2_log - INFO -    272    562.4 MiB      0.0 MiB               tframe = _getBig(ndate.strftime("%Y-%m-%d"))
+
+2018-04-27 07:05:58,523 - memory_profile2_log - INFO -    273    562.4 MiB      0.0 MiB               if tframe is not None:
+
+2018-04-27 07:05:58,525 - memory_profile2_log - INFO -    274    562.4 MiB      0.0 MiB                   if not tframe.empty:
+
+2018-04-27 07:05:58,526 - memory_profile2_log - INFO -    275    562.4 MiB      0.0 MiB                       datalist.append(tframe)
+
+2018-04-27 07:05:58,529 - memory_profile2_log - INFO -    276                                         else: 
+
+2018-04-27 07:05:58,529 - memory_profile2_log - INFO -    277                                             logger.info("tframe for date: %s is empty", ndate.strftime("%Y-%m-%d"))
+
+2018-04-27 07:05:58,530 - memory_profile2_log - INFO -    278    562.4 MiB      0.0 MiB           logger.info("len datalist: %d", len(datalist))
+
+2018-04-27 07:05:58,532 - memory_profile2_log - INFO -    279    562.4 MiB      0.0 MiB           logger.info("All data fetch iterative done!!")
+
+2018-04-27 07:05:58,532 - memory_profile2_log - INFO -    280                             
+
+2018-04-27 07:05:58,532 - memory_profile2_log - INFO -    281    562.4 MiB      0.0 MiB       if len(datalist) > 1:
+
+2018-04-27 07:05:58,536 - memory_profile2_log - INFO -    282    612.9 MiB     50.5 MiB           big_frame = pd.concat(datalist)
+
+2018-04-27 07:05:58,536 - memory_profile2_log - INFO -    283    581.5 MiB    -31.4 MiB           del datalist
+
+2018-04-27 07:05:58,539 - memory_profile2_log - INFO -    284                                 else:
+
+2018-04-27 07:05:58,539 - memory_profile2_log - INFO -    285                                     big_frame = datalist
+
+2018-04-27 07:05:58,539 - memory_profile2_log - INFO -    286    581.6 MiB      0.1 MiB       big_frame['date'] = pd.to_datetime(big_frame['date'], format='%Y-%m-%d', errors='coerce')
+
+2018-04-27 07:05:58,540 - memory_profile2_log - INFO -    287                             
+
+2018-04-27 07:05:58,542 - memory_profile2_log - INFO -    288                                 # ~ get current news interest ~
+
+2018-04-27 07:05:58,542 - memory_profile2_log - INFO -    289    581.6 MiB      0.0 MiB       if not cd:
+
+2018-04-27 07:05:58,542 - memory_profile2_log - INFO -    290                                     logger.info("Collecting training data(current date interest)..")
+
+2018-04-27 07:05:58,543 - memory_profile2_log - INFO -    291                                     current_frame = load_bigquery(bq_client, query_transform, job_config)
+
+2018-04-27 07:05:58,548 - memory_profile2_log - INFO -    292                                     logger.info("getting total: %d training data(current date interest)" % (len(current_frame)))
+
+2018-04-27 07:05:58,549 - memory_profile2_log - INFO -    293                                 else:
+
+2018-04-27 07:05:58,549 - memory_profile2_log - INFO -    294    581.6 MiB      0.0 MiB           logger.info("Collecting training data(current date interest) using argument: %s", cd)
+
+2018-04-27 07:05:58,551 - memory_profile2_log - INFO -    295    581.6 MiB      0.0 MiB           query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+
+2018-04-27 07:05:58,552 - memory_profile2_log - INFO -    296                             
+
+2018-04-27 07:05:58,552 - memory_profile2_log - INFO -    297                                     # safe handling of query parameter
+
+2018-04-27 07:05:58,555 - memory_profile2_log - INFO -    298                                     query_params = [
+
+2018-04-27 07:05:58,555 - memory_profile2_log - INFO -    299    581.6 MiB      0.0 MiB               bigquery.ScalarQueryParameter('start_date', 'STRING', str_datecurrent)
+
+2018-04-27 07:05:58,555 - memory_profile2_log - INFO -    300                                     ]
+
+2018-04-27 07:05:58,559 - memory_profile2_log - INFO -    301                             
+
+2018-04-27 07:05:58,559 - memory_profile2_log - INFO -    302    581.6 MiB      0.0 MiB           job_config.query_parameters = query_params
+
+2018-04-27 07:05:58,562 - memory_profile2_log - INFO -    303    679.4 MiB     97.8 MiB           current_frame = load_bigquery(bq_client, query_fit + query_fit_where, job_config)
+
+2018-04-27 07:05:58,563 - memory_profile2_log - INFO -    304    679.4 MiB      0.0 MiB           logger.info("getting total: %d training data(current date interest) for date: %s" % (len(current_frame), str_datecurrent))
+
+2018-04-27 07:05:58,565 - memory_profile2_log - INFO -    305                             
+
+2018-04-27 07:05:58,565 - memory_profile2_log - INFO -    306    679.4 MiB      0.1 MiB       current_frame['date'] = date_current  # we need manually adding date, because table not support
+
+2018-04-27 07:05:58,565 - memory_profile2_log - INFO -    307    679.4 MiB      0.0 MiB       current_frame['date'] = pd.to_datetime(current_frame['date'],
+
+2018-04-27 07:05:58,568 - memory_profile2_log - INFO -    308    679.4 MiB      0.0 MiB                                              format='%Y-%m-%d', errors='coerce')
+
+2018-04-27 07:05:58,569 - memory_profile2_log - INFO -    309                             
+
+2018-04-27 07:05:58,572 - memory_profile2_log - INFO -    310    679.4 MiB      0.0 MiB       train_time = time.time() - t0
+
+2018-04-27 07:05:58,572 - memory_profile2_log - INFO -    311    679.4 MiB      0.0 MiB       logger.info("loading time of: %d total genuine-current interest data ~ take %0.3fs" % (len(current_frame) + len(big_frame), train_time))
+
+2018-04-27 07:05:58,573 - memory_profile2_log - INFO -    312                             
+
+2018-04-27 07:05:58,575 - memory_profile2_log - INFO -    313                                 # del bq_client
+
+2018-04-27 07:05:58,575 - memory_profile2_log - INFO -    314    679.4 MiB      0.0 MiB       return big_frame, current_frame
+
+2018-04-27 07:05:58,575 - memory_profile2_log - INFO - 
+
+
+2018-04-27 07:05:58,579 - memory_profile2_log - INFO - ~~~~~~~~~~~~~~~~~~ Begin Main Process ~~~~~~~~~~~~~~~~~~~~~
+2018-04-27 07:05:58,661 - memory_profile2_log - INFO - train on: 1077719 total history data(D(u, t))
+2018-04-27 07:05:58,663 - memory_profile2_log - INFO - transform on: 230425 total current data(D(t))
+2018-04-27 07:06:03,477 - memory_profile2_log - INFO - Len of model_fit: 1077719
+2018-04-27 07:06:03,479 - memory_profile2_log - INFO - Len of df_dut: 1077719
+2018-04-27 07:07:37,138 - memory_profile2_log - INFO - Filtering topic by top: 15 for each(General-Specific) !!
+2018-04-27 07:07:37,243 - memory_profile2_log - INFO - Total train time: 98.581s
+2018-04-27 07:07:37,243 - memory_profile2_log - INFO - memory left before cleaning: 58.200 percent memory...
+2018-04-27 07:07:37,244 - memory_profile2_log - INFO - cleaning up some objects...
+2018-04-27 07:07:37,246 - memory_profile2_log - INFO - deleting df_dut...
+2018-04-27 07:07:37,247 - memory_profile2_log - INFO - deleting df_dt...
+2018-04-27 07:07:37,249 - memory_profile2_log - INFO - deleting df_input...
+2018-04-27 07:07:37,259 - memory_profile2_log - INFO - deleting df_input_X...
+2018-04-27 07:07:37,260 - memory_profile2_log - INFO - deleting df_current...
+2018-04-27 07:07:37,263 - memory_profile2_log - INFO - deleting map_topic_isgeneral...
+2018-04-27 07:07:37,332 - memory_profile2_log - INFO - deleting model_fit...
+2018-04-27 07:07:37,332 - memory_profile2_log - INFO - deleting result...
+2018-04-27 07:07:37,361 - memory_profile2_log - INFO - Filename: .\legacy_bigquery.py
+
+
+2018-04-27 07:07:37,362 - memory_profile2_log - INFO - Line #    Mem usage    Increment   Line Contents
+
+2018-04-27 07:07:37,364 - memory_profile2_log - INFO - ================================================
+
+2018-04-27 07:07:37,365 - memory_profile2_log - INFO -     76    669.7 MiB    669.7 MiB   @profile
+
+2018-04-27 07:07:37,365 - memory_profile2_log - INFO -     77                             def main(df_input, df_current, current_date, G,
+
+2018-04-27 07:07:37,367 - memory_profile2_log - INFO -     78                                      project_id, savetrain=False, multproc=True,
+
+2018-04-27 07:07:37,368 - memory_profile2_log - INFO -     79                                      threshold=0, start_date=None, end_date=None,
+
+2018-04-27 07:07:37,368 - memory_profile2_log - INFO -     80                                      saveto="datastore"):
+
+2018-04-27 07:07:37,369 - memory_profile2_log - INFO -     81                                 """
+
+2018-04-27 07:07:37,371 - memory_profile2_log - INFO -     82                                     Main cron method
+
+2018-04-27 07:07:37,374 - memory_profile2_log - INFO -     83                                 """
+
+2018-04-27 07:07:37,378 - memory_profile2_log - INFO -     84                                 # ~ Data Preprocessing ~
+
+2018-04-27 07:07:37,378 - memory_profile2_log - INFO -     85                                 # split data train, untuk menggambarkan data berasal dari 2 table
+
+2018-04-27 07:07:37,380 - memory_profile2_log - INFO -     86                                 # D(u, t)
+
+2018-04-27 07:07:37,380 - memory_profile2_log - INFO -     87    669.7 MiB      0.0 MiB       logger.info("~~~~~~~~~~~~~~~~~~ Begin Main Process ~~~~~~~~~~~~~~~~~~~~~")
+
+2018-04-27 07:07:37,381 - memory_profile2_log - INFO -     88    703.7 MiB     33.9 MiB       df_dut = df_input.copy(deep=True)
+
+2018-04-27 07:07:37,381 - memory_profile2_log - INFO -     89    703.7 MiB      0.0 MiB       df_dut['date'] = pd.to_datetime(df_dut['date'], format='%Y-%m-%d', errors='coerce')
+
+2018-04-27 07:07:37,384 - memory_profile2_log - INFO -     90                             
+
+2018-04-27 07:07:37,385 - memory_profile2_log - INFO -     91                                 # D(t)
+
+2018-04-27 07:07:37,388 - memory_profile2_log - INFO -     92    710.7 MiB      7.0 MiB       df_dt = df_current.copy(deep=True)
+
+2018-04-27 07:07:37,388 - memory_profile2_log - INFO -     93    710.7 MiB      0.0 MiB       df_dt['date'] = pd.to_datetime(df_dt['date'], format='%Y-%m-%d', errors='coerce')
+
+2018-04-27 07:07:37,390 - memory_profile2_log - INFO -     94                             
+
+2018-04-27 07:07:37,390 - memory_profile2_log - INFO -     95                                 # ~~~~~~ Begin train ~~~~~~
+
+2018-04-27 07:07:37,391 - memory_profile2_log - INFO -     96    710.7 MiB      0.0 MiB       t0 = time.time()
+
+2018-04-27 07:07:37,391 - memory_profile2_log - INFO -     97    710.7 MiB      0.0 MiB       logger.info("train on: %d total history data(D(u, t))", len(df_dut))
+
+2018-04-27 07:07:37,395 - memory_profile2_log - INFO -     98    710.7 MiB      0.0 MiB       logger.info("transform on: %d total current data(D(t))", len(df_dt))
+
+2018-04-27 07:07:37,398 - memory_profile2_log - INFO -     99                             
+
+2018-04-27 07:07:37,398 - memory_profile2_log - INFO -    100                                 # instantiace class
+
+2018-04-27 07:07:37,398 - memory_profile2_log - INFO -    101    710.7 MiB      0.0 MiB       BR = GBayesTopicRecommender(current_date, G=G)
+
+2018-04-27 07:07:37,400 - memory_profile2_log - INFO -    102                             
+
+2018-04-27 07:07:37,401 - memory_profile2_log - INFO -    103                                 # ~~ Fit ~~
+
+2018-04-27 07:07:37,403 - memory_profile2_log - INFO -    104                                 #   handling genuine news interest < current date
+
+2018-04-27 07:07:37,404 - memory_profile2_log - INFO -    105    714.4 MiB      3.7 MiB       NB = BR.processX(df_dut)
+
+2018-04-27 07:07:37,404 - memory_profile2_log - INFO -    106                                 # mulai dari sini sampai df_input_x setiap fit dan transform
+
+2018-04-27 07:07:37,404 - memory_profile2_log - INFO -    107                                 #   nanti dipindah ke class train utama
+
+2018-04-27 07:07:37,408 - memory_profile2_log - INFO -    108    756.9 MiB     42.4 MiB       result = pd.merge(df_dut, NB, on=['date', 'topic_id'])
+
+2018-04-27 07:07:37,410 - memory_profile2_log - INFO -    109                                 """
+
+2018-04-27 07:07:37,411 - memory_profile2_log - INFO -    110                                     num_y = total global click for category=ci on periode t
+
+2018-04-27 07:07:37,411 - memory_profile2_log - INFO -    111                                     num_x = total click from user_U for category=ci on periode t
+
+2018-04-27 07:07:37,413 - memory_profile2_log - INFO -    112                                 """
+
+2018-04-27 07:07:37,413 - memory_profile2_log - INFO -    113    756.9 MiB      0.0 MiB       fitby_sigmant = True
+
+2018-04-27 07:07:37,413 - memory_profile2_log - INFO -    114    756.9 MiB      0.0 MiB       df_input_X = result[['date', 'user_id',
+
+2018-04-27 07:07:37,414 - memory_profile2_log - INFO -    115    756.9 MiB      0.0 MiB                            'topic_id', 'num_x', 'num_y',
+
+2018-04-27 07:07:37,414 - memory_profile2_log - INFO -    116    799.0 MiB     42.1 MiB                            'is_general']]
+
+2018-04-27 07:07:37,414 - memory_profile2_log - INFO -    117    799.0 MiB      0.0 MiB       model_fit = BR.fit(df_dut, df_input_X,
+
+2018-04-27 07:07:37,415 - memory_profile2_log - INFO -    118    799.0 MiB      0.0 MiB                          full_bayes=False, use_sigmant=fitby_sigmant,
+
+2018-04-27 07:07:37,418 - memory_profile2_log - INFO -    119    897.2 MiB     98.2 MiB                          verbose=False)
+
+2018-04-27 07:07:37,418 - memory_profile2_log - INFO -    120    897.2 MiB      0.0 MiB       logger.info("Len of model_fit: %d", len(model_fit))
+
+2018-04-27 07:07:37,421 - memory_profile2_log - INFO -    121    897.2 MiB      0.0 MiB       logger.info("Len of df_dut: %d", len(df_dut))
+
+2018-04-27 07:07:37,421 - memory_profile2_log - INFO -    122                             
+
+2018-04-27 07:07:37,421 - memory_profile2_log - INFO -    123                                 # ~~ and Transform ~~
+
+2018-04-27 07:07:37,423 - memory_profile2_log - INFO -    124                                 #   handling current news interest == current date
+
+2018-04-27 07:07:37,423 - memory_profile2_log - INFO -    125    897.2 MiB      0.0 MiB       if df_dt.empty:
+
+2018-04-27 07:07:37,424 - memory_profile2_log - INFO -    126                                     print "Cek your df_dt, cannot be emtpy!!"
+
+2018-04-27 07:07:37,424 - memory_profile2_log - INFO -    127                                     return None
+
+2018-04-27 07:07:37,424 - memory_profile2_log - INFO -    128    895.7 MiB     -1.4 MiB       NB = BR.processX(df_dt)
+
+2018-04-27 07:07:37,428 - memory_profile2_log - INFO -    129    906.3 MiB     10.6 MiB       result = pd.merge(df_dt, NB, on=['date', 'topic_id'])
+
+2018-04-27 07:07:37,430 - memory_profile2_log - INFO -    130                             
+
+2018-04-27 07:07:37,431 - memory_profile2_log - INFO -    131    906.3 MiB      0.0 MiB       df_input_X = result[['date', 'user_id', 'topic_id',
+
+2018-04-27 07:07:37,431 - memory_profile2_log - INFO -    132    873.0 MiB    -33.3 MiB                            'num_x', 'num_y', 'is_general']]
+
+2018-04-27 07:07:37,433 - memory_profile2_log - INFO -    133    873.0 MiB      0.0 MiB       model_transform = BR.transform(df1=df_dt, df2=df_input_X,
+
+2018-04-27 07:07:37,433 - memory_profile2_log - INFO -    134    873.0 MiB      0.0 MiB                                      fitted_model=model_fit,
+
+2018-04-27 07:07:37,434 - memory_profile2_log - INFO -    135    891.6 MiB     18.6 MiB                                      verbose=False)
+
+2018-04-27 07:07:37,434 - memory_profile2_log - INFO -    136                                 # ~~~ filter is general and specific topic ~~~
+
+2018-04-27 07:07:37,436 - memory_profile2_log - INFO -    137                                 # the idea is just we need to rerank every topic according
+
+2018-04-27 07:07:37,437 - memory_profile2_log - INFO -    138                                 # user_id and and is_general by p0_posterior
+
+2018-04-27 07:07:37,437 - memory_profile2_log - INFO -    139    891.6 MiB      0.0 MiB       map_topic_isgeneral = df_dut[['topic_id',
+
+2018-04-27 07:07:37,440 - memory_profile2_log - INFO -    140    900.9 MiB      9.3 MiB                                     'is_general']].groupby(['topic_id',
+
+2018-04-27 07:07:37,441 - memory_profile2_log - INFO -    141    891.6 MiB     -9.2 MiB                                                             'is_general']
+
+2018-04-27 07:07:37,443 - memory_profile2_log - INFO -    142                                                                                      ).size().to_frame().reset_index()
+
+2018-04-27 07:07:37,444 - memory_profile2_log - INFO -    143                             
+
+2018-04-27 07:07:37,444 - memory_profile2_log - INFO -    144                                 # map_topic_isgeneral = map_topic_isgeneral.loc[~map_topic_isgeneral.index.duplicated(keep='first')]
+
+2018-04-27 07:07:37,444 - memory_profile2_log - INFO -    145                                 # model_transform = model_transform.loc[~model_transform.index.duplicated(keep='first')]
+
+2018-04-27 07:07:37,446 - memory_profile2_log - INFO -    146    891.9 MiB      0.2 MiB       model_transform['is_general'] = model_transform['topic_id'].map(map_topic_isgeneral.drop_duplicates('topic_id').set_index('topic_id')['is_general'])
+
+2018-04-27 07:07:37,446 - memory_profile2_log - INFO -    147                             
+
+2018-04-27 07:07:37,447 - memory_profile2_log - INFO -    148                                 # ~ start by provide rank for each topic type ~
+
+2018-04-27 07:07:37,447 - memory_profile2_log - INFO -    149    966.0 MiB     74.1 MiB       model_transform['rank'] = model_transform.groupby(['user_id', 'is_general'])['p0_posterior'].rank(ascending=False)
+
+2018-04-27 07:07:37,447 - memory_profile2_log - INFO -    150    971.7 MiB      5.8 MiB       model_transform = model_transform.sort_values(['is_general', 'rank'], ascending=[False, True])
+
+2018-04-27 07:07:37,447 - memory_profile2_log - INFO -    151                             
+
+2018-04-27 07:07:37,447 - memory_profile2_log - INFO -    152                                 # ~ set threshold to filter output
+
+2018-04-27 07:07:37,448 - memory_profile2_log - INFO -    153    971.7 MiB      0.0 MiB       if threshold > 0:
+
+2018-04-27 07:07:37,451 - memory_profile2_log - INFO -    154    971.7 MiB      0.0 MiB           logger.info("Filtering topic by top: %d for each(General-Specific) !!", threshold)
+
+2018-04-27 07:07:37,453 - memory_profile2_log - INFO -    155    971.7 MiB      0.0 MiB           model_transform = model_transform[(model_transform['rank'] <= threshold) &
+
+2018-04-27 07:07:37,454 - memory_profile2_log - INFO -    156    960.3 MiB    -11.4 MiB                                             (model_transform['p0_posterior'] > 0.)]
+
+2018-04-27 07:07:37,454 - memory_profile2_log - INFO -    157                             
+
+2018-04-27 07:07:37,456 - memory_profile2_log - INFO -    158                                 # print "\n", model_transform[['user_id', 'topic_id', 'p0_posterior',
+
+2018-04-27 07:07:37,456 - memory_profile2_log - INFO -    159                                 #                             'is_general', 'rank']].loc[model_transform['user_id'].str.contains('1610c8e6b6466b-05a6ac1ba8c1b8-4323461-100200-1',
+
+2018-04-27 07:07:37,457 - memory_profile2_log - INFO -    160                                 #                                                                                                 case=False)].head(45)
+
+2018-04-27 07:07:37,457 - memory_profile2_log - INFO -    161                                 # print "len(model_transform): %d" % len(model_transform)
+
+2018-04-27 07:07:37,457 - memory_profile2_log - INFO -    162                             
+
+2018-04-27 07:07:37,457 - memory_profile2_log - INFO -    163    960.3 MiB      0.0 MiB       train_time = time.time() - t0
+
+2018-04-27 07:07:37,460 - memory_profile2_log - INFO -    164    960.3 MiB      0.0 MiB       logger.info("Total train time: %0.3fs", train_time)
+
+2018-04-27 07:07:37,463 - memory_profile2_log - INFO -    165                             
+
+2018-04-27 07:07:37,464 - memory_profile2_log - INFO -    166    960.3 MiB      0.0 MiB       logger.info("memory left before cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
+
+2018-04-27 07:07:37,466 - memory_profile2_log - INFO -    167                             
+
+2018-04-27 07:07:37,467 - memory_profile2_log - INFO -    168    960.3 MiB      0.0 MiB       logger.info("cleaning up some objects...")
+
+2018-04-27 07:07:37,469 - memory_profile2_log - INFO -    169    960.3 MiB      0.0 MiB       del df_dut
+
+2018-04-27 07:07:37,470 - memory_profile2_log - INFO -    170    960.3 MiB      0.0 MiB       logger.info("deleting df_dut...")
+
+2018-04-27 07:07:37,470 - memory_profile2_log - INFO -    171    960.3 MiB      0.0 MiB       del df_dt
+
+2018-04-27 07:07:37,470 - memory_profile2_log - INFO -    172    960.3 MiB      0.0 MiB       logger.info("deleting df_dt...")
+
+2018-04-27 07:07:37,471 - memory_profile2_log - INFO -    173    960.3 MiB      0.0 MiB       del df_input
+
+2018-04-27 07:07:37,474 - memory_profile2_log - INFO -    174    960.3 MiB      0.0 MiB       logger.info("deleting df_input...")
+
+2018-04-27 07:07:37,474 - memory_profile2_log - INFO -    175    951.5 MiB     -8.8 MiB       del df_input_X
+
+2018-04-27 07:07:37,477 - memory_profile2_log - INFO -    176    951.5 MiB      0.0 MiB       logger.info("deleting df_input_X...")
+
+2018-04-27 07:07:37,479 - memory_profile2_log - INFO -    177    951.5 MiB      0.0 MiB       del df_current
+
+2018-04-27 07:07:37,479 - memory_profile2_log - INFO -    178    951.5 MiB      0.0 MiB       logger.info("deleting df_current...")
+
+2018-04-27 07:07:37,480 - memory_profile2_log - INFO -    179    951.5 MiB      0.0 MiB       del map_topic_isgeneral
+
+2018-04-27 07:07:37,480 - memory_profile2_log - INFO -    180    951.5 MiB      0.0 MiB       logger.info("deleting map_topic_isgeneral...")
+
+2018-04-27 07:07:37,482 - memory_profile2_log - INFO -    181    851.8 MiB    -99.7 MiB       del model_fit
+
+2018-04-27 07:07:37,482 - memory_profile2_log - INFO -    182    851.8 MiB      0.0 MiB       logger.info("deleting model_fit...")
+
+2018-04-27 07:07:37,484 - memory_profile2_log - INFO -    183    851.8 MiB      0.0 MiB       del result
+
+2018-04-27 07:07:37,484 - memory_profile2_log - INFO -    184    851.8 MiB      0.0 MiB       logger.info("deleting result...")
+
+2018-04-27 07:07:37,487 - memory_profile2_log - INFO -    185                                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+2018-04-27 07:07:37,487 - memory_profile2_log - INFO -    186                                 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+2018-04-27 07:07:37,489 - memory_profile2_log - INFO -    187    851.8 MiB      0.0 MiB       if savetrain:
+
+2018-04-27 07:07:37,489 - memory_profile2_log - INFO -    188                                     model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'rank']].copy(deep=True)
+
+2018-04-27 07:07:37,490 - memory_profile2_log - INFO -    189                                     del model_transform
+
+2018-04-27 07:07:37,490 - memory_profile2_log - INFO -    190                                     logger.info("deleting model_transform...")
+
+2018-04-27 07:07:37,490 - memory_profile2_log - INFO -    191                                     logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
+
+2018-04-27 07:07:37,490 - memory_profile2_log - INFO -    192                             
+
+2018-04-27 07:07:37,492 - memory_profile2_log - INFO -    193                                     logger.info("Begin saving trained data...")
+
+2018-04-27 07:07:37,496 - memory_profile2_log - INFO -    194                                     # print "\n", model_transform.head(5)
+
+2018-04-27 07:07:37,496 - memory_profile2_log - INFO -    195                                     # ~ Place your code to save the training model here ~
+
+2018-04-27 07:07:37,497 - memory_profile2_log - INFO -    196                                     if str(saveto).lower() == "datastore":
+
+2018-04-27 07:07:37,499 - memory_profile2_log - INFO -    197                                         logger.info("Using google datastore as storage...")
+
+2018-04-27 07:07:37,499 - memory_profile2_log - INFO -    198                                         if multproc:
+
+2018-04-27 07:07:37,500 - memory_profile2_log - INFO -    199                                             mh.saveDatastoreMP(model_transformsv)
+
+2018-04-27 07:07:37,502 - memory_profile2_log - INFO -    200                                             # mh.saveDataStorePutMulti(model_transform[['user_id', 'topic_id', 'is_general', 'rank']])
+
+2018-04-27 07:07:37,503 - memory_profile2_log - INFO -    201                                         else:
+
+2018-04-27 07:07:37,503 - memory_profile2_log - INFO -    202                                             mh.saveDatastore(model_transformsv)
+
+2018-04-27 07:07:37,506 - memory_profile2_log - INFO -    203                                             
+
+2018-04-27 07:07:37,506 - memory_profile2_log - INFO -    204                                     elif str(saveto).lower() == "elastic":
+
+2018-04-27 07:07:37,510 - memory_profile2_log - INFO -    205                                         logger.info("Using ElasticSearch as storage...")
+
+2018-04-27 07:07:37,510 - memory_profile2_log - INFO -    206                                         mh.saveElasticS(model_transformsv)
+
+2018-04-27 07:07:37,512 - memory_profile2_log - INFO -    207                             
+
+2018-04-27 07:07:37,512 - memory_profile2_log - INFO -    208                                     # need save sigma_nt for daily train
+
+2018-04-27 07:07:37,513 - memory_profile2_log - INFO -    209                                     # secara defaul perhitungan fit menggunakan sigma_Nt
+
+2018-04-27 07:07:37,513 - memory_profile2_log - INFO -    210                                     #   jadi prosedur ini hanya berlaku jika fitby_sigmant = False
+
+2018-04-27 07:07:37,513 - memory_profile2_log - INFO -    211                                     if start_date and end_date:
+
+2018-04-27 07:07:37,513 - memory_profile2_log - INFO -    212                                         if not fitby_sigmant:
+
+2018-04-27 07:07:37,516 - memory_profile2_log - INFO -    213                                             logging.info("Saving sigma Nt...")
+
+2018-04-27 07:07:37,517 - memory_profile2_log - INFO -    214                                             save_sigma_nt = BR.sum_all_nt.copy(deep=True)
+
+2018-04-27 07:07:37,519 - memory_profile2_log - INFO -    215                                             save_sigma_nt['start_date'] = start_date
+
+2018-04-27 07:07:37,519 - memory_profile2_log - INFO -    216                                             save_sigma_nt['end_date'] = end_date
+
+2018-04-27 07:07:37,520 - memory_profile2_log - INFO -    217                                             print save_sigma_nt.head(5)
+
+2018-04-27 07:07:37,520 - memory_profile2_log - INFO -    218                                             print "len(save_sigma_nt): %d" % len(save_sigma_nt)
+
+2018-04-27 07:07:37,522 - memory_profile2_log - INFO -    219                                             # mh.saveDatastoreMP(save_sigma_nt)
+
+2018-04-27 07:07:37,522 - memory_profile2_log - INFO -    220    851.8 MiB      0.0 MiB       return
+
+2018-04-27 07:07:37,522 - memory_profile2_log - INFO - 
+
+
+2018-04-27 07:07:37,523 - memory_profile2_log - INFO - ~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~

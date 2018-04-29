@@ -1,0 +1,7 @@
+flask
+flask-restful
+google-cloud
+pandas==0.21.0
+elasticsearch==6.2.0
+gunicorn==19.6.0
+eventlet

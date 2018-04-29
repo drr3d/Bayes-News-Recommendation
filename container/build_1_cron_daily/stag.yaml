@@ -1,0 +1,29 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: topic-reco-trainer
+  namespace: staging
+  labels:
+    project: topic-recommender-v1
+    service: data_trainer
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: reco-cron-staging
+            image: gcr.io/kumparan-data/reco-cron-staging:v0.1.X
+            imagePullPolicy: Always
+            resources:
+              requests:
+                memory: 8192Mi
+              limits:
+                memory: 16384Mi
+            env:
+              - name: GOOGLE_APPLICATION_CREDENTIALS
+                value: "/kum_topicreco_cron/src/topic-recommender-staging.json"
+              - name: STACKDRIVER_LOGGING_ENABLED
+                value: "1"
+          restartPolicy: OnFailure

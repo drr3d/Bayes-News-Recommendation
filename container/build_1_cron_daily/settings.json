@@ -1,0 +1,21 @@
+{
+    "project_id":"kumparan-data",
+    "G":10,
+    "N":15,
+    "threshold":15,
+    "fit_dbtable":{
+        "db_table_name":"kumparan-data.topic_recommender.click_distribution_daily",
+        "date_columnname":"_PARTITIONTIME",
+        "uid_columnname":"click_user_alias_id",
+        "topid_columnname":"click_topic_id",
+        "isgeneral_columnname":"click_topic_is_general",
+        "topiccount_columnname":"click_topic_count"
+    },
+    "transform_dbtable":{
+        "db_table_name":"kumparan-data.topic_recommender.click_distribution_hourly",
+        "uid_columnname":"click_user_alias_id",
+        "topid_columnname":"click_topic_id",
+        "isgeneral_columnname":"click_topic_is_general",
+        "topiccount_columnname":"click_topic_count"
+    }
+}

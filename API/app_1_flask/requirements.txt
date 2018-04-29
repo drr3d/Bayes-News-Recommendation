@@ -1,0 +1,5 @@
+flask
+flask-restful
+google-cloud
+pandas==0.21.0
+elasticsearch==6.2.0

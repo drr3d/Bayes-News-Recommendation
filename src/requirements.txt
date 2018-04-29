@@ -1,0 +1,15 @@
+google-cloud
+google-cloud-bigquery==0.29.0
+pandas==0.21.0
+numpy==1.13.3
+scipy
+scikit-learn
+flask
+gunicorn
+eventlet
+pandas-gbq
+uwsgi
+espandas
+ujson
+falcon
+elasticsearch==6.2.0

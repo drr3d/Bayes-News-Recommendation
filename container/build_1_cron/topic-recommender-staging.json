@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "kumparan-data",
+  "private_key_id": "a5066553bdde39ea267072d4764cf32ac4779349",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC9D0nRm9HSrMSo\nFNTNytyszKW1+qJRt/IxWE0l8ENzwFK9GdiqdCr8PEx6FdLsMemx/+Y8XyUvV5rj\nWAWWr0qqVsDig+ixmRUWCHa+3N+HJkTHJKUcFcv2oEbmtwIzgKFoNQIjpdcVwZ88\nl9TX2wl3cqy96JcmWj2bojUfse2ijRIDnxymdDtWC+kE1GF2vQjLKnkS5t4xGhpt\nFEaK/D79bXhAEurGA3VNHNpT9pFR8ZBbljDcgLLOwirSzt+RJeL4nQqGxBaP8S9s\nl0Jk6+wubauyVIKRWVO3F0t4UyrLXmV/syx6IWfRCCurewMGD5Wz51ZLBqut6Bmd\nrseFA5PDAgMBAAECggEAJP4yVATYxA/RNRBKaXAZyOgMPrTpgPLsvXIJOnSuRh5q\nMh02E3hClvNXhYXyrQvBLfaj/skhNge+w2BMS6VGB1mNSWVFKUcKZLLIRWVjiYbX\n612Evx+Wts26wdcqY5h2PLUuk3oWQWgO9+S/nXL7AbfbDBfQR41dw6+0FF0U4frB\nZHQ430fJNvRBdF3oKou6lccj0ddbiPgSnXtRWzkCU088TGEkUiA3H0guznz3wn78\n4M7lZV8SVVBn6FFZQvxS50DcXfiTe6SwjA+ZVkfEwKuhVdHRxOgvslAOyQw05CZe\n9gy3n0CJNd1T9h703qrLAKyAlLIQQnqIGvoKriHIkQKBgQDdXZOmCpx9wJA0X0Du\n5afsawabnCRywNG0rWulb76p2nr3uz++dzF2RZx+Pplgv3RVhu4/TlRUFjbl11Dh\naL9K5c4I3lw0MQCYG3SvtkSGj4aNV1+Khqy0X8Cs5c4Y5tbeeJHQ5+tU86RwfXOD\nhlm2lXN8X9t8HCgenrer2GPW8wKBgQDao8G2Ul1OMZE3zbR/BllprviK7QJBRP15\nLALY0DYD93dEIJ68P46+pcZUWCA/JWypqUpIDRxlLmmvyrTj8wHPsJf5oD3upNkX\nJbEfkOV7eMj+Z6ukSnph8aPV8Ecf9bFRiaMbJmfu0q2wWcfVybinLqwz47Wh7bSM\nvPvEM5Ej8QKBgQCY8W5x6iL1P3ZiuO1EIahD0C5glSEZp9871hXp16sD78/GGbmQ\n/wlNjgrxro6KKb1W2kMBujzJXA/R/VIEazq/pMcVmYxbAwBGF7InNOdjkQaF4ThB\nnYr1lLKqwpwC2HrcerFEhPgzWaLjlcmZtdmGLPv9kr0yosGVZlPAh2FzwQKBgAmJ\nuUql3zIpEWe4zpX4BfCJVIhi/IUyaEhf9iPVOXYE1qwfLC2ULDr+6l8FlSqMDGh+\nXSI1iDaVxsCHfEqxcDPKRWb7aZg+ksXivA5feNNhGouWpDM/mIUrUHVlzQSE6F5h\nPb9SdphBkpgt4nzeFvMcIyEEXwkYYJb/K5CMm1lRAoGAW//y1aBCuB3Eca5MaqsG\nbWHit4FoYQrDdS6fv5F+6eHZcvZk54+ul4HxcQM6iUVnrSGWpM1F62jHApLjsbpG\nVJUrPzdPD5mAXoT1U3ANzZuTRkNI6JHEIsvm+1T2JFscqu6SFzu/7DOC5uq5eoiQ\nVmsxBZ5qNiJYh6aFUt9Udtk=\n-----END PRIVATE KEY-----\n",
+  "client_email": "topic-recommender-staging@kumparan-data.iam.gserviceaccount.com",
+  "client_id": "114583412233531510387",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/topic-recommender-staging%40kumparan-data.iam.gserviceaccount.com"
+}

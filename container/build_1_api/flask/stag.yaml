@@ -1,0 +1,41 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: topic-reco-flaskapi
+  namespace: staging
+  labels:
+    project: topic-recommender-v1
+    service: topicreco_api_service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project:  topic-recommender-v1
+      service: topicreco_api_service
+  template:
+    metadata:
+      name: topic-reco-flaskapi
+      namespace: staging
+      labels:
+        project: topic-recommender-v1
+        service: topicreco_api_service
+    spec:
+      containers:
+      - name: reco-api-staging
+        image: gcr.io/kumparan-data/reco-api-staging:v0.1.X
+        ports:
+          - containerPort: 8993
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: 1024Mi
+          limits:
+            memory: 4096Mi
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/kum_topicreco_api/src/topic-recommender-staging.json"
+          - name: STACKDRIVER_LOGGING_ENABLED
+            value: "1"
+          - name: DEBUG_MODE
+            value: "1"
+      restartPolicy: Always
