@@ -24,10 +24,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the current directory contents into the container
 ADD . /kum_topicreco_cron/src
 
-# Running Python Application
-# ~~~ lokal run ~~~
-#CMD ["python", "legacy.py", "-ids", "/kum_topicreco_cron/src/", "-cd", "2018-04-15", "-loadmp", "false", "-savetrain", "True", "-savemp", "False", "-storage", "elastic"]
-
 # ~~~ remote run ~~~
-CMD ["python", "legacy.py", "-ids", "/kum_topicreco_cron/src/", "-loadmp", "true", "-savetrain", "True", "-savemp", "True", "-storage", "datastore", "-cpu", "6"]
+CMD ["python", "legacy.py", "-ids", "/kum_topicreco_cron/src/", "-savetrain", "True", "-savemp", "True", "-storage", "datastore", "-cpu", "4"]
  

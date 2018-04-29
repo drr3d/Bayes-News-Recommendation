@@ -242,8 +242,7 @@ class GBayesTopicRecommender(object):
 
         # its called smoothed because we add certain value of virtual click
         fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-        print "Len of fitted_models on main class: %d" % len(fitted_models)
-        print fitted_models.head(10)
+
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):

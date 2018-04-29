@@ -10,15 +10,77 @@
 import os
 import logging
 import time
+import multiprocessing as mp
 from multiprocessing import Process
 
 from google.cloud import datastore
 from google.cloud.datastore.entity import Entity
 
+from elasticsearch import Elasticsearch
+from elasticsearch import RequestsHttpConnection
+from elasticsearch import helpers as EShelpers
+
 from espandas import Espandas
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        if 'log_time' in kw:
+            name = kw.get('log_name', method.__name__.upper())
+            kw['log_time'][name] = int((te - ts) * 1000)
+        else:
+            logger.info( '%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
+        return result
+    return timed
+
+
+def _getBig(keylist):
+    project_id = 'kumparan-data'
+    client = datastore.Client(project_id)
+    return client.get_multi(keys=keylist)
+
+
+def loadDSHistory(key_list, kinds='topic_recomendation_history'):
+    kind = kinds
+    project_id = 'kumparan-data'
+    client = datastore.Client(project_id)
+
+    keys = list()
+    logger.info("Appending key of list history...")
+    for key in key_list:
+        keys.append(client.key(kinds, key))
+
+    def partition(lst, n):
+        division = len(lst) / float(n)
+        return [ lst[int(round(division * i)): int(round(division * (i + 1)))] for i in xrange(n) ]
+    
+    logger.info("Split key of list history...")
+
+    divider = 150
+    index_list = partition(keys, divider)
+
+    logger.info("len of index_list: %d", len(index_list))
+    logger.info("len of index_list per-unit: %d", len(index_list[:1]))
+    logger.info("Begin get_multi of list history...")
+
+    cpu = 4
+    pool = mp.Pool(processes=cpu) 
+    multprocessA = [pool.apply_async(_getBig, args=(keylist, )) for keylist in index_list]
+
+    logger.info("Flushing get_multi data...")
+    output_multprocessA = [p.get() for p in multprocessA]
+
+    logger.info("Cleaning up multiprocess...")
+
+    pool.close()
+    pool.terminate()
+    return output_multprocessA
 
 
 def saveByPandasGBQ(model_fit, model_transform,
@@ -73,7 +135,7 @@ def saveDatastore(df):
             is model_tranform a.k.a final model
     """
     start_total_time = time.time()
-
+    logging.info("Saving main Transform model to Google DataStore...")
     def _ds_connection():
         """
             * This function handle connection to Data Store (DS)
@@ -124,7 +186,6 @@ def saveDatastore(df):
     end_total_time = time.time() - start_total_time
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
     return
-
 
 def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     """
@@ -193,7 +254,7 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     end_total_time = time.time() - start_total_time
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
-
+@timeit
 def saveDatastoreMP(df):
     """
         Saving to google datastore.
@@ -204,10 +265,9 @@ def saveDatastoreMP(df):
         df : pandas dataframe, required=True
             is model_tranform a.k.a final model
     """
-    start_total_time = time.time()
+    # start_total_time = time.time()
     logger.info("Saving by Multiprocess..")
     logger.info("Saving main Transform model to Google DataStore...")
-
     def _ds_connection():
         """
             * This function handle connection to Data Store (DS)
@@ -268,13 +328,12 @@ def saveDatastoreMP(df):
     procs = []
     for df_temp in index_list:
         proc = Process(target=_output, args=(df_temp, kind))
+        proc.daemon = True
         procs.append(proc)
         proc.start()
-
-    end_total_time = time.time() - start_total_time
-    logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
     return
-
+    # end_total_time = time.time() - start_total_time
+    # logger.info('Finish inserting batch entity to datastore, time taken: %.5f with total entity: %d' % (end_total_time, len(df)))
 
 def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type'):
     logging.info("Saving main Transform model to Elasticsearch...")

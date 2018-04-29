@@ -78,7 +78,7 @@ class GBayesTopicRecommender(object):
 
     def fit(self, df1, df2,
             full_bayes=False, use_sigmant=False,
-            verbose=False):
+            sigma_nt_hist=None, verbose=False):
         """
             Fit the genuine news interest.
 
@@ -137,9 +137,19 @@ class GBayesTopicRecommender(object):
 
         # sum all Nt for ever user_Ui
         #  as from paper, Nt is total number of clicks by the user in time periode t
+        """
+            2018-04-29
+            ----------
+                untuk perhitungan daily train,
+                    sepertinya disini juga sudah mulai perlu
+                    menambahkan sigma_Nt dari proses history
+        """
         self.sum_all_nt = df1[['user_id', 'num']].groupby(['user_id'])['num'].agg('sum')
         self.sum_all_nt = self.sum_all_nt.to_frame().reset_index()
         self.sum_all_nt = self.sum_all_nt.rename(columns={'num': 'sigma_Nt'})
+
+        if sigma_nt_hist is not None:
+            self.sum_all_nt = pd.concat([self.sum_all_nt, sigma_nt_hist]).groupby(['user_id'], as_index=False)['sigma_Nt'].sum()
 
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
@@ -191,8 +201,8 @@ class GBayesTopicRecommender(object):
 
         return model
 
-    def transform(self, df1, df2,
-                  fitted_model, verbose=False):
+    def transform(self, df1, df2, fitted_model,
+                  fitted_model_hist=None, verbose=False):
         """
             Predicting User’s Current News Interest combined with current news trend
 
@@ -232,6 +242,12 @@ class GBayesTopicRecommender(object):
         cur_result2 = cur_result2[['topic_id', 'p0_cat_ci']]
 
         # ~~~~
+        # ada kemungkinan kita cukup save fitted_models saja untuk perhitungan perharinya,
+        #   jadi nanti kita cukup simpan fitted_models, kemudian load data 1 hari
+        #   dikombinasikan dengan loaded fitted_models ini.
+        #   > hasil fitted_models ini lebih sedikit datanya dibanding df_dut
+        # yang perlu di rekalkulasi:
+        #    > sigma_Nt
         fitted_models['pt_posterior_x_Nt'] = pd.eval('fitted_models.posterior * fitted_models.Ntotal')
         fitted_models = fitted_models.groupby(['user_id',
                                                'topic_id'])['pt_posterior_x_Nt'].agg('sum')
@@ -242,7 +258,34 @@ class GBayesTopicRecommender(object):
 
         # its called smoothed because we add certain value of virtual click
         fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
+        print "Len of fitted_models on main class: %d" % len(fitted_models)
 
+        # ~ disini baru dilakukan concate dataframe
+        if fitted_model_hist is not None:
+            print "Combining current fitted_models with history..."
+            print "Fitted models before concat:\n", fitted_models.head(5)
+            print "len of current fitted models: %d" % len(fitted_models)
+            print "len of history fitted models: %d" % len(fitted_model_hist)
+            fitted_model_hist = fitted_model_hist[["p0_cat_ci","pt_posterior_x_Nt", "smoothed_pt_posterior","topic_id","user_id"]]
+            
+            fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
+            print "len of fitted models after concat: %d" % len(fitted_models)
+            print "Recalculating fitted models..."
+            fitted_models = fitted_models.groupby(['user_id',
+                                                   'topic_id'])['pt_posterior_x_Nt'].agg('sum')
+            fitted_models = fitted_models.reset_index()
+            
+            print "Fitted models after concat:\n", fitted_models.head(5)
+            print "Simplifying current fitted models..."
+            fitted_models = fitted_models[["p0_cat_ci","pt_posterior_x_Nt",
+                                           "smoothed_pt_posterior","topic_id","user_id"]]
+
+            # its called smoothed because we add certain value of virtual click
+            fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
+            print "Fitted models after concat-simplify:\n", fitted_models.head(5)
+            print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
+
+        print fitted_models.head(10)
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):

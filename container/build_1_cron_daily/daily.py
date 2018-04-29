@@ -6,10 +6,12 @@ import os
 import sys
 import time
 import json
+import numpy as np
 import argparse
 import datetime
 import psutil
 from datetime import timedelta
+
 import pandas as pd
 import multiprocessing as mp
 
@@ -17,30 +19,28 @@ from google.cloud import bigquery
 from googlenews.BayesTopicRecommender import GBayesTopicRecommender
 import modelhandler as mh  # comment if you have another method for saving models
 
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-# logger = logging.getLogger(__name__)
-
-# ~~~~~~~~~~~~~
-logger = logging.getLogger('memory_profile6_log')
-logger.setLevel(logging.DEBUG)
-
-from memory_profiler import profile
-# create file handler which logs even debug messages
-fh = logging.FileHandler("memory_profile6.log")
-fh.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-
-# add the handlers to the logger
-logger.addHandler(fh)
-from memory_profiler import LogFile
-import sys
-sys.stdout = LogFile('memory_profile6_log', reportIncrementFlag=False)
-# ~~~~~~~~~~~~~
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 pd.set_option('display.width', 1000)
+
+def humanbytes(B):
+    'Return the given bytes as a human friendly KB, MB, GB, or TB string'
+    B = float(int(B))
+    KB = float(1024)
+    MB = float(KB ** 2) # 1,048,576
+    GB = float(KB ** 3) # 1,073,741,824
+    TB = float(KB ** 4) # 1,099,511,627,776
+    if B < KB:
+        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
+    elif KB <= B < MB:
+        return '{0:.2f} KB'.format(B/KB)
+    elif MB <= B < GB:
+        return '{0:.2f} MB'.format(B/MB)
+    elif GB <= B < TB:
+        return '{0:.2f} GB'.format(B/GB)
+    elif TB <= B:
+        return '{0:.2f} TB'.format(B/TB)
 
 
 def str2bool(v):
@@ -51,19 +51,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
-@profile
-def load_bigquery(client, query, job_config):
-    """
-        Bigquery to dataframe
-    """
-    job_config.use_legacy_sql = False
-    job_config.allowLargeResults = True
 
-    result = client.query(query, job_config=job_config)  # .result()
-    df = result.to_dataframe()
-    return df
-
-@profile
 def loadBQ(client, query, job_config, tabletype="history"):
     # https://github.com/ofek/pypinfo/issues/27
     job_config.use_legacy_sql = False
@@ -74,14 +62,15 @@ def loadBQ(client, query, job_config, tabletype="history"):
 
     col_name = [field.name for field in rows.schema]
     
-    data = []
-    for row in list(rows):
-        data.append(list(row))
+    def _q_iterator():
+        for row in rows:
+            yield list(row)
 
-    df = pd.DataFrame(data, columns=col_name)
-    del rows
+    df = pd.DataFrame( _q_iterator() , columns=col_name)
+    
+    logger.info("size of df: %s", humanbytes(sys.getsizeof(df)))
     del result
-    del data
+ 
     return df
 
 def dateValidate(date_text):
@@ -94,13 +83,21 @@ def dateValidate(date_text):
     except ValueError:
         raise ValueError("Incorrect data format, should be YYYY-MM-DD")
 
-@profile
-def main(df_input, df_current, current_date, G,
-         project_id, savetrain=False, multproc=True,
+def kill_proc_tree(pid, including_parent=False):    
+    parent = psutil.Process(pid)
+    for child in parent.children(recursive=True):
+        child.kill()
+    if including_parent:
+        parent.kill()
+
+
+def main(df_input, df_current, df_hist,
+         current_date, G, project_id,
+         savetrain=False, multproc=True,
          threshold=0, start_date=None, end_date=None,
          saveto="datastore"):
     """
-        Main cron method
+        Main Process
     """
     # ~ Data Preprocessing ~
     # split data train, untuk menggambarkan data berasal dari 2 table
@@ -115,8 +112,9 @@ def main(df_input, df_current, current_date, G,
 
     # ~~~~~~ Begin train ~~~~~~
     t0 = time.time()
-    logger.info("train on: %d total history data(D(u, t))", len(df_dut))
+    logger.info("train on: %d total genuine interest data(D(u, t))", len(df_dut))
     logger.info("transform on: %d total current data(D(t))", len(df_dt))
+    logger.info("apply on: %d total history data(D(t))", len(df_hist))
 
     # instantiace class
     BR = GBayesTopicRecommender(current_date, G=G)
@@ -198,8 +196,6 @@ def main(df_input, df_current, current_date, G,
     logger.info("deleting model_fit...")
     del result
     logger.info("deleting result...")
-    del BR
-    logger.info("deleting BR...")
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
@@ -214,7 +210,17 @@ def main(df_input, df_current, current_date, G,
             logger.info("Using google datastore as storage...")
             if multproc:
                 mh.saveDataStorePutMulti(model_transformsv)
-                mh.saveDataStorePutMulti(fitted_models, kinds='topic_recomendation_history')
+
+                logger.info("Saving fitted_models as history...")
+                save_sigma_nt = BR.sum_all_nt.copy(deep=True)
+                fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
+                mh.saveDataStorePutMulti(fitted_models_sigmant, kinds='topic_recomendation_history')
+
+                del BR
+                logger.info("deleting BR...")
+
+                del save_sigma_nt
+                logger.info("deleting save_sigma_nt...")
             else:
                 mh.saveDatastore(model_transformsv)
                 
@@ -236,75 +242,104 @@ def main(df_input, df_current, current_date, G,
                 # mh.saveDatastoreMP(save_sigma_nt)
     return
 
-@profile
-def preprocess(loadmp, cpu, cd, query_fit, date_generated):
+def getBig(procdate, query_fit):
+    bq_client = bigquery.Client()
+    job_config = bigquery.QueryJobConfig()
+
+    logger.info("Collecting training data for date: %s", procdate)
+    # ~ get genuine news interest ~
+    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+
+    # safe handling of query parameter
+    query_params = [
+        bigquery.ScalarQueryParameter('start_date', 'STRING', procdate)
+    ]
+
+    job_config.query_parameters = query_params
+    # temp_df = load_bigquery(client, query_fit + query_fit_where, job_config)
+    temp_df = loadBQ(bq_client, query_fit + query_fit_where, job_config)
+
+    if temp_df.empty:
+        logger.info("%s data is empty!", procdate)
+        return None
+    else:
+        logger.info("getting total: %d training data(genuine interest) for date: %s" % (len(temp_df), procdate))
+        return temp_df
+
+
+def BQPreprocess(cpu, date_generated, client, query_fit):
+    bq_client = client
+    job_config = bigquery.QueryJobConfig()
+
+    datalist = []
+    datalist_hist = []
+
+    logger.info("Starting data fetch iterative...")
+    for ndate in date_generated:
+        tframe = getBig(ndate.strftime("%Y-%m-%d"), query_fit)
+        if tframe is not None:
+            if not tframe.empty:
+                X_split = np.array_split(tframe, 5)
+                logger.info("Len of X_split for batch load: %d", len(X_split))
+                logger.info("Appending history data...")
+                for ix in range(len(X_split)):
+                    # ~ loading history
+                    """
+                        disini antara kita gabungkan dengan tframe, atau buat df sendiri
+                    """
+                    logger.info("processing batch-%d", ix)
+                    # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
+                    logger.info("creating list history data...")
+                    lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
+
+                    logger.info("call history data...")
+                    h_frame = mh.loadDSHistory(lhistory)
+
+                    # me = os.getpid()
+                    # kill_proc_tree(me)
+
+                    logger.info("done collecting history data, appending now...")
+                    for m in h_frame:
+                        if m is not None:
+                            if len(m) > 0:
+                                datalist_hist.append(pd.DataFrame(m))
+                    del h_frame
+                    del lhistory
+
+                logger.info("Appending training data...")
+                datalist.append(tframe)
+        else: 
+            logger.info("tframe for date: %s is empty", ndate.strftime("%Y-%m-%d"))
+    logger.info("len datalist: %d", len(datalist))
+    logger.info("All data fetch iterative done!!")
+
+    return datalist, datalist_hist
+
+
+def preprocess(cpu, cd, query_fit, date_generated):
     bq_client = bigquery.Client()
     job_config = bigquery.QueryJobConfig()
 
     # ~~~ Begin collecting data ~~~
     t0 = time.time()
-    datalist = []
+    datalist, datalist_hist = BQPreprocess(cpu, date_generated, bq_client, query_fit)
+    if datalist_hist is None:
+        logger.info("Training cannot be empty..")
+        return
+    big_frame_hist = pd.concat(datalist_hist)
+    
+    logger.info("size of big_frame_hist: %s", humanbytes(sys.getsizeof(big_frame_hist)))
 
-    def _getBig(procdate, client):
-        logger.info("Collecting training data for date: %s", procdate)
-        # ~ get genuine news interest ~
-        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+    big_frame = pd.concat(datalist)
+    logger.info("size of big_frame: %s", humanbytes(sys.getsizeof(big_frame)))
+    del datalist
 
-        # safe handling of query parameter
-        query_params = [
-            bigquery.ScalarQueryParameter('start_date', 'STRING', procdate)
-        ]
-
-        job_config.query_parameters = query_params
-        temp_df = loadBQ(client, query_fit + query_fit_where, job_config)
-
-        if temp_df.empty:
-            logger.info("%s data is empty!", procdate)
-            return None
-        else:
-            logger.info("getting total: %d training data(genuine interest) for date: %s" % (len(temp_df), procdate))
-            if loadmp:
-                logger.info("Exiting: %s", mp.current_process().name)
-            return temp_df
-
-    if loadmp:
-        logger.info("Starting data fetch multiprocess..")
-        logger.info("number of process: %d", len(date_generated))
-
-        pool = mp.Pool(processes=cpu)
-        multprocessA = [pool.apply_async(_getBig, args=(ndate.strftime("%Y-%m-%d"), bq_client, )) for ndate in date_generated]
-        output_multprocessA = [p.get() for p in multprocessA]
-
-        for m in output_multprocessA:
-            if m is not None:
-                if not m.empty:
-                    datalist.append(m)
-
-        logger.info("len datalist: %d", len(datalist))
-        logger.info("All data fetch multiprocess done!!")
-    else:
-        logger.info("Starting data fetch iterative...")
-        for ndate in date_generated:
-            tframe = _getBig(ndate.strftime("%Y-%m-%d"), bq_client)
-            if tframe is not None:
-                if not tframe.empty:
-                    datalist.append(tframe)
-            else: 
-                logger.info("tframe for date: %s is empty", ndate.strftime("%Y-%m-%d"))
-        logger.info("len datalist: %d", len(datalist))
-        logger.info("All data fetch iterative done!!")
-
-    if len(datalist) > 1:
-        big_frame = pd.concat(datalist)
-        del datalist
-    else:
-        big_frame = datalist
     big_frame['date'] = pd.to_datetime(big_frame['date'], format='%Y-%m-%d', errors='coerce')
 
     # ~ get current news interest ~
     if not cd:
         logger.info("Collecting training data(current date interest)..")
-        current_frame = load_bigquery(bq_client, query_transform, job_config)
+        current_frame = loadBQ(bq_client, query_transform, job_config)
         logger.info("getting total: %d training data(current date interest)" % (len(current_frame)))
     else:
         logger.info("Collecting training data(current date interest) using argument: %s", cd)
@@ -316,17 +351,17 @@ def preprocess(loadmp, cpu, cd, query_fit, date_generated):
         ]
 
         job_config.query_parameters = query_params
-        current_frame = load_bigquery(bq_client, query_fit + query_fit_where, job_config)
+        current_frame = loadBQ(bq_client, query_fit + query_fit_where, job_config)
         logger.info("getting total: %d training data(current date interest) for date: %s" % (len(current_frame), str_datecurrent))
 
     current_frame['date'] = date_current  # we need manually adding date, because table not support
     current_frame['date'] = pd.to_datetime(current_frame['date'],
                                            format='%Y-%m-%d', errors='coerce')
-
+    logger.info("size of current_frame: %s", humanbytes(sys.getsizeof(current_frame)))
     train_time = time.time() - t0
     logger.info("loading time of: %d total genuine-current interest data ~ take %0.3fs" % (len(current_frame) + len(big_frame), train_time))
 
-    return big_frame, current_frame
+    return big_frame, current_frame, big_frame_hist
 
 
 if __name__ == "__main__":
@@ -351,8 +386,6 @@ if __name__ == "__main__":
                         help="set current date manually, if not using current timestampt.")
     parser.add_argument("-savemp", type=str2bool, default="true", required=False,
                         help="set whether save data flow is handle by python multiprocess.")
-    parser.add_argument("-loadmp", type=str2bool, default="false", required=False,
-                        help="set whether load data flow is handle by python multiprocess.")
     parser.add_argument('-storage', choices=['datastore', 'elastic'], default="datastore",
                         help="set storage for saving trained model.")
     parser.add_argument("-savetrain", type=str2bool, default="true", required=False,
@@ -437,11 +470,10 @@ if __name__ == "__main__":
 
     str_datecurrent = date_current.strftime('%Y-%m-%d')
     date_1_days_ago = date_current - timedelta(days=1)
-    if N == 1:
-        N = 2
+
     date_N_days_ago = date_current - timedelta(days=N) # date_1_days_ago - timedelta(days=N)
 
-    start = datetime.datetime.strptime(date_N_days_ago.strftime('%Y-%m-%d'), "%Y-%m-%d")
+    start = datetime.datetime.strptime(date_1_days_ago.strftime('%Y-%m-%d'), "%Y-%m-%d")
     end = date_1_days_ago  # datetime.datetime.strptime(str_datecurrent, "%Y-%m-%d")
     date_generated = [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
     date_generated.append(date_1_days_ago)
@@ -450,11 +482,14 @@ if __name__ == "__main__":
     logger.info("using start date: %s", start)
     logger.info("using end date: %s", date_1_days_ago.strftime('%Y-%m-%d'))
 
-    big_frame, current_frame = preprocess(args.loadmp, args.cpu, args.cd, query_fit, date_generated)
-
-    # ~~~ Proses Train ~~~
-    main(big_frame, current_frame, date_current,
-         G, project_id, savetrain=args.savetrain,
-         multproc=args.savemp, threshold=T,
-         start_date=None, end_date=None, saveto=args.storage)
-    logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+    preprocess = preprocess(args.cpu, args.cd, query_fit, date_generated)
+    if preprocess:
+        big_frame, current_frame, big_frame_hist = preprocess
+        # ~~~ Proses Train ~~~
+        main(big_frame, current_frame, big_frame_hist, date_current,
+            G, project_id, savetrain=args.savetrain,
+            multproc=args.savemp, threshold=T,
+            start_date=None, end_date=None, saveto=args.storage)
+        logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+    else:
+        logger.info("Train return False, please cek your data availability")

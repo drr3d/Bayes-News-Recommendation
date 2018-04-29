@@ -126,7 +126,6 @@ def saveDatastore(df):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
     return
 
-
 def dict_to_datastore_taskMp(client, _kind, _identifier, _insertedData):
     incomplete_key = client.key(_kind, _identifier)
     entity = datastore.Entity(key=incomplete_key)

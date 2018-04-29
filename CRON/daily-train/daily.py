@@ -115,7 +115,7 @@ def main(df_input, df_current, df_hist,
          current_date, G, project_id,
          savetrain=False, multproc=True,
          threshold=0, start_date=None, end_date=None,
-         saveto="datastore"):
+         saveto="datastore", fitted_models_hist=None):
     """
         Main Process
     """
@@ -134,7 +134,7 @@ def main(df_input, df_current, df_hist,
     t0 = time.time()
     logger.info("train on: %d total genuine interest data(D(u, t))", len(df_dut))
     logger.info("transform on: %d total current data(D(t))", len(df_dt))
-    logger.info("apply on: %d total history data(D(t))", len(df_hist))
+    logger.info("apply on: %d total history...)", len(df_hist))
 
     # instantiace class
     BR = GBayesTopicRecommender(current_date, G=G)
@@ -153,9 +153,16 @@ def main(df_input, df_current, df_hist,
     df_input_X = result[['date', 'user_id',
                          'topic_id', 'num_x', 'num_y',
                          'is_general']]
+    # get sigma_Nt from fitted_models_hist
+    uniques_fit_hist = fitted_models_hist[['user_id', 'sigma_Nt']]
+    logger.info("len of uniques_fit_hist:%d", len(uniques_fit_hist))
+    uniques_fit_hist = uniques_fit_hist.drop_duplicates(subset=['user_id','sigma_Nt'])
+    logger.info("len of uniques_fit_hist after drop duplicate:%d", len(uniques_fit_hist))
+
+    # begin fit
     model_fit = BR.fit(df_dut, df_input_X,
                        full_bayes=False, use_sigmant=fitby_sigmant,
-                       verbose=False)
+                       sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
 
@@ -169,9 +176,12 @@ def main(df_input, df_current, df_hist,
 
     df_input_X = result[['date', 'user_id', 'topic_id',
                          'num_x', 'num_y', 'is_general']]
+
+    print "model_fit dtypes:\n", model_fit.dtypes
+    print "fitted_models_hist dtypes:\n", fitted_models_hist.dtypes
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
-                                                  verbose=False)
+                                                  fitted_model_hist=fitted_models_hist, verbose=False)
     # ~~~ filter is general and specific topic ~~~
     # the idea is just we need to rerank every topic according
     # user_id and and is_general by p0_posterior
@@ -218,6 +228,7 @@ def main(df_input, df_current, df_hist,
     logger.info("deleting result...")
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
         model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'rank']].copy(deep=True)
         del model_transform
@@ -229,21 +240,30 @@ def main(df_input, df_current, df_hist,
         if str(saveto).lower() == "datastore":
             logger.info("Using google datastore as storage...")
             if multproc:
+                # ~ save transform models ~
                 mh.saveDataStorePutMulti(model_transformsv)
 
+                """
+                # ~ save fitted models ~
                 logger.info("Saving fitted_models as history...")
                 save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-                fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id','topic_id'])
-                mh.saveDataStorePutMulti(fitted_models_sigmant, kinds='topic_recomendation_history')
+                fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
+
+                X_split = np.array_split(fitted_models_sigmant, 10)
+                logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
+                for ix in range(len(X_split)):
+                    logger.info("processing batch-%d", ix)
+                    mh.saveDataStorePutMulti(X_split[ix], kinds='topic_recomendation_history')
+
+                del X_split
+                logger.info("deleting X_split...")
+                del save_sigma_nt
+                logger.info("deleting save_sigma_nt...")
+                """
 
                 del BR
                 logger.info("deleting BR...")
 
-                del save_sigma_nt
-                logger.info("deleting save_sigma_nt...")
-            else:
-                mh.saveDatastore(model_transformsv)
-                
         elif str(saveto).lower() == "elastic":
             logger.info("Using ElasticSearch as storage...")
             mh.saveElasticS(model_transformsv)
@@ -311,6 +331,7 @@ def BQPreprocess(cpu, date_generated, client, query_fit):
                     # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
                     logger.info("creating list history data...")
                     lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
+                    # lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
 
                     logger.info("call history data...")
                     h_frame = mh.loadDSHistory(lhistory)
@@ -343,6 +364,9 @@ def preprocess(cpu, cd, query_fit, date_generated):
     # ~~~ Begin collecting data ~~~
     t0 = time.time()
     datalist, datalist_hist = BQPreprocess(cpu, date_generated, bq_client, query_fit)
+    if len(datalist_hist) <= 0:
+        logger.info("Training cannot be empty..")
+        return False
     big_frame_hist = pd.concat(datalist_hist)
     print "big_frame_hist:\n", big_frame_hist.head(20)
     logger.info("size of big_frame_hist: %s", humanbytes(sys.getsizeof(big_frame_hist)))
@@ -390,9 +414,6 @@ if __name__ == "__main__":
     """
     parser_description = "Legacy Training of Topic Recommender using Bayesian Framework"
     parser = argparse.ArgumentParser(description=parser_description)
-
-    parser.add_argument("-N", metavar='N', type=int, default=25, required=False,
-                        help="N of total back date you wan to use as training set.")
     parser.add_argument("-G", metavar='G', type=int, default=10, required=False,
                         help="G represent virtual click as smoothing factor on training.")
     parser.add_argument("-T", metavar='T', type=int, default=15, required=False,
@@ -415,6 +436,9 @@ if __name__ == "__main__":
                         help='Input setting file name')
 
     args = parser.parse_args()
+
+    # ~ made N fix ~
+    N = 1
 
     if args.ids:
         if not args.isn:
@@ -447,12 +471,11 @@ if __name__ == "__main__":
                     FROM `""" + transform_table['db_table_name'] + """` """
 
         project_id = config["project_id"]
-        N = config["N"]
+        
         G = config["G"]
         T = config["threshold"]
     else:
         project_id = args.p  # assign bigquery project id
-        N = args.N
         G = args.G
         T = args.T
         query_fit = """ SELECT _PARTITIONTIME AS date,
@@ -469,9 +492,6 @@ if __name__ == "__main__":
                               click_topic_count as num
                               FROM `kumparan-data.topic_recommender.click_distribution_hourly`
                           """
-    if N <= 0:
-        logger.DEBUG("N cannot smaller or equal to 0...")
-        sys.exit()
 
     if G <= 0:
         logger.DEBUG("G cannot smaller or equal to 0...")
@@ -488,10 +508,8 @@ if __name__ == "__main__":
     str_datecurrent = date_current.strftime('%Y-%m-%d')
     date_1_days_ago = date_current - timedelta(days=1)
 
-    date_N_days_ago = date_current - timedelta(days=N) # date_1_days_ago - timedelta(days=N)
-
     start = datetime.datetime.strptime(date_1_days_ago.strftime('%Y-%m-%d'), "%Y-%m-%d")
-    end = date_1_days_ago  # datetime.datetime.strptime(str_datecurrent, "%Y-%m-%d")
+    end = date_1_days_ago
     date_generated = [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
     date_generated.append(date_1_days_ago)
     print "date_generated: ", date_generated
@@ -499,11 +517,17 @@ if __name__ == "__main__":
     logger.info("using start date: %s", start)
     logger.info("using end date: %s", date_1_days_ago.strftime('%Y-%m-%d'))
 
-    big_frame, current_frame, big_frame_hist = preprocess(args.cpu, args.cd, query_fit, date_generated)
-
-    # ~~~ Proses Train ~~~
-    main(big_frame, current_frame, big_frame_hist, date_current,
-         G, project_id, savetrain=args.savetrain,
-         multproc=args.savemp, threshold=T,
-         start_date=None, end_date=None, saveto=args.storage)
-    logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+    # date_current =  datetime.datetime.now().date()
+    # args.cd = None
+    preprocess = preprocess(args.cpu, args.cd, query_fit, date_generated)
+    if preprocess:
+        big_frame, current_frame, big_frame_hist = preprocess
+        # ~~~ Proses Train ~~~
+        main(big_frame, current_frame, big_frame_hist, date_current,
+            G, project_id, savetrain=args.savetrain,
+            multproc=args.savemp, threshold=T,
+            start_date=None, end_date=None, saveto=args.storage,
+            fitted_models_hist=big_frame_hist)
+        logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+    else:
+        logger.info("Train return False, please cek your data availability")

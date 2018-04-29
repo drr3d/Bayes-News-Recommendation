@@ -79,7 +79,6 @@ class Espandas(object):
         :param index: the ElasticSearch index
         :param doc_type: the ElasticSearch doc_type
         """
-        logger.info("memory used befor es save: %.3f percent memory...", psutil.virtual_memory().percent)
         if not isinstance(df, pd.DataFrame):
             raise ValueError('df must be a pandas DataFrame')
 
@@ -104,7 +103,7 @@ class Espandas(object):
             records = df.to_json(orient='records')
             records = json.loads(records)
             for record in records:
-                # logger.info("generate_dict() using %.3f percent memory...", psutil.virtual_memory().percent)
+                logger.info("generate_dict() using %.3f percent memory...", psutil.virtual_memory().percent)
                 yield record
 
         # The dataframe should be sorted by column name
@@ -112,7 +111,7 @@ class Espandas(object):
 
         # ~ to handling OOM ~
         df = df.reindex(sorted(df.columns), axis=1).copy()
-        logger.info("after reindex using %.3f percent memory...", psutil.virtual_memory().percent)
+        logger.info("reindex using %.3f percent memory...", psutil.virtual_memory().percent)
 
         data = ({'_index': index,
                  '_type': doc_type,

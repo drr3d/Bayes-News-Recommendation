@@ -18,9 +18,9 @@ spec:
             imagePullPolicy: Always
             resources:
               requests:
-                memory: 8192Mi
+                memory: 4096Mi
               limits:
-                memory: 16384Mi
+                memory: 8192Mi
             env:
               - name: GOOGLE_APPLICATION_CREDENTIALS
                 value: "/kum_topicreco_cron/src/topic-recommender-staging.json"
