@@ -115,7 +115,7 @@ def main(df_input, df_current, current_date, G,
         num_y = total global click for category=ci on periode t
         num_x = total click from user_U for category=ci on periode t
     """
-    fitby_sigmant = True
+    fitby_sigmant = False
     df_input_X = result[['date', 'user_id',
                          'topic_id', 'num_x', 'num_y',
                          'is_general']]
@@ -183,7 +183,12 @@ def main(df_input, df_current, current_date, G,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'rank']].copy(deep=True)
+        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
+        model_transformsv['date'] = current_date  # we need manually adding date, because table not support
+        model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
+                                                   format='%Y-%m-%d', errors='coerce')         
+        model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
+                                                              'rank':'interest_rank' , 'date':'interest_score_created_at'})
         del model_transform
         logger.info("deleting model_transform...")
         logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
@@ -193,12 +198,15 @@ def main(df_input, df_current, current_date, G,
         if str(saveto).lower() == "datastore":
             logger.info("Using google datastore as storage...")
             if multproc:
+                logger.info("Saving main Transform model to Google DataStore...")
+                logger.info("Saving total data: %d", len(model_transformsv))
                 mh.saveDataStorePutMulti(model_transformsv)
 
-                logger.info("Saving fitted_models as history...")
+                logger.info("Saving fitted_models as history to Google DataStore...")
                 save_sigma_nt = BR.sum_all_nt.copy(deep=True)
                 fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
                 X_split = np.array_split(fitted_models_sigmant, 10)
+                logger.info("Saving total data: %d", len(fitted_models_sigmant))
                 logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
                 for ix in range(len(X_split)):
                     logger.info("processing batch-%d", ix)
@@ -216,7 +224,37 @@ def main(df_input, df_current, current_date, G,
                 
         elif str(saveto).lower() == "elastic":
             logger.info("Using ElasticSearch as storage...")
-            mh.saveElasticS(model_transformsv)
+            logging.info("Saving main Transform model to Elasticsearch...")
+            
+            X_split = np.array_split(model_transformsv, 5)
+            logger.info("Saving total data: %d", len(model_transformsv))
+            logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
+            for ix in range(len(X_split)):
+                logger.info("processing batch-%d", ix)
+                mh.saveElasticS(X_split[ix])
+            del X_split
+
+            logger.info("Saving fitted_models as history to Elasticsearch...")
+            save_sigma_nt = BR.sum_all_nt.copy(deep=True)
+            fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
+
+            fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
+            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
+
+            X_split = np.array_split(fitted_models_sigmant, 5)
+            logger.info("Saving total data: %d", len(fitted_models_sigmant))
+            logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
+            for ix in range(len(X_split)):
+                logger.info("processing batch-%d", ix)
+                mh.saveElasticS(X_split[ix], esindex_name="fitted_hist_index",  estype_name='fitted_hist_type')
+            del X_split
+            
+            del BR
+            logger.info("deleting BR...")
+            del save_sigma_nt
+            logger.info("deleting save_sigma_nt...")
+            del fitted_models_sigmant
+            logger.info("deleting fitted_models_sigmant...")
 
     return
 
@@ -396,12 +434,6 @@ if __name__ == "__main__":
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
                     """ + transform_table['topiccount_columnname'] + """ as num
                     FROM `""" + transform_table['db_table_name'] + """` CDH
-                    WHERE CDH.click_user_alias_id 
-                                IN (SELECT UTCL.user_alias_id AS user_alias_id
-                                    FROM `topic_recommender.users_total_click` UTCL
-                                    GROUP BY 1
-                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
-                                    )
                     """
 
         project_id = config["project_id"]
@@ -427,12 +459,6 @@ if __name__ == "__main__":
                               click_topic_is_general as is_general,
                               click_topic_count as num
                             FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
-                            WHERE CDH.click_user_alias_id 
-                                IN (SELECT UTCL.user_alias_id AS user_alias_id
-                                    FROM `topic_recommender.users_total_click` UTCL
-                                    GROUP BY 1
-                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
-                                    )
                           """
     if N <= 0:
         logger.DEBUG("N cannot smaller or equal to 0...")

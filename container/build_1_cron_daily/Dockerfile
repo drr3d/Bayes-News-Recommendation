@@ -25,5 +25,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 ADD . /kum_topicreco_cron/src
 
 # ~~~ remote run ~~~
-CMD ["python", "legacy.py", "-ids", "/kum_topicreco_cron/src/", "-savetrain", "True", "-savemp", "True", "-storage", "datastore", "-cpu", "4"]
+CMD ["python", "daily.py",  "-savetrain", "True", "-savemp", "True", "-storage", "elastic", "-cpu", "3"]
  

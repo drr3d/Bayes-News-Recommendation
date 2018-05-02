@@ -153,12 +153,9 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
         df : pandas dataframe, required=True
             is model_tranform a.k.a final model
     """
-
     start_total_time = time.time()
     logger.info("Saving by Multiprocess with 'put_multi' ..")
-    logger.info("Saving main Transform model to Google DataStore...")
 
-   
     def _split_data(divider, df):
         n = df.shape[0] / divider
 
@@ -174,7 +171,7 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
 
     index_list = _split_data(divider, df)
 
-    cpu = 4
+    cpu = 3
     pool = mp.Pool(processes=cpu) 
     for df_temp in index_list:
         pool.apply_async(outputMp, args=(df_temp, kind, ))
@@ -183,100 +180,11 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     pool.close()
     pool.terminate()
 
-    # procs = []
-    # for df_temp in index_list:
-    #     proc = Process(target=_output, args=(df_temp, kind))
-    #     procs.append(proc)
-    #     proc.start()
-
     end_total_time = time.time() - start_total_time
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
-
-
-def saveDatastoreMP(df):
-    """
-        Saving to google datastore.
-
-        parameter:
-        ----------
-
-        df : pandas dataframe, required=True
-            is model_tranform a.k.a final model
-    """
-    start_total_time = time.time()
-    logger.info("Saving by Multiprocess..")
-    logger.info("Saving main Transform model to Google DataStore...")
-
-    def _ds_connection():
-        """
-            * This function handle connection to Data Store (DS)
-            * To use it :
-                - export google credential with command :
-                    'export GOOGLE_APPLICATION_CREDENTIALS=(path to json credential for GCP)'
-                    example :
-                        'export GOOGLE_APPLICATION_CREDENTIALS="/your_dir_location/service-account-file.json"'
-        """
-
-        return datastore.Client('kumparan-data')
-
-    def _get_batch(iterable, n=1):
-        """
-            * function to iterate batch which is will insert to datastore
-        """
-
-        l = len(iterable)
-        for ndx in range(0, l, n):
-            yield iterable[ndx:min(ndx + n, l)]
-
-    def _output(df, _kind):
-        ind = 0
-        all_entities = []
-
-        for i in df.T.to_dict().values():
-            _key = "{}_{}".format(i['user_id'], i['topic_id'])
-            entity = Entity(key=client.key(_kind, _key))
-            entity.update(i)
-            all_entities.append(entity)
-
-        for entities in _get_batch(all_entities, n=500):
-            batch = client.batch()
-            batch.begin()
-
-            for entity in entities:
-                batch.put(entity)
-            batch.commit()
-
-            ind += 500
-
-    def _split_data(divider, df):
-        n = df.shape[0] / divider
-
-        index_list = []
-
-        for index in xrange(0, len(df), n):
-            index_list.append(df[index: index + n])
-
-        return index_list
-
-    client = _ds_connection()
-    kind = 'topic_recomendation'
-    divider = 10
-
-    index_list = _split_data(divider, df)
-
-    procs = []
-    for df_temp in index_list:
-        proc = Process(target=_output, args=(df_temp, kind))
-        procs.append(proc)
-        proc.start()
-
-    end_total_time = time.time() - start_total_time
-    logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
-    return
 
 
 def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type'):
-    logging.info("Saving main Transform model to Elasticsearch...")
     start_total_time = time.time()
 
     elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"

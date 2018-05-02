@@ -12,19 +12,13 @@ import logging
 import time
 import multiprocessing as mp
 from multiprocessing import Process
+import pandas as pd
 
 from google.cloud import datastore
 from google.cloud.datastore.entity import Entity
 
-from elasticsearch import Elasticsearch
-from elasticsearch import RequestsHttpConnection
-from elasticsearch import helpers as EShelpers
-
-from espandas import Espandas
-
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def timeit(method):
     def timed(*args, **kw):
@@ -74,7 +68,7 @@ def loadDSHistory(key_list, kinds='topic_recomendation_history'):
     # result.append(client.get_multi(keys=keylist))
     # yield client.get_multi(keys=keys[:1000])
 
-    cpu = 10
+    cpu = 5
     pool = mp.Pool(processes=cpu) 
     multprocessA = [pool.apply_async(_getBig, args=(keylist, )) for keylist in index_list]
 
@@ -86,6 +80,32 @@ def loadDSHistory(key_list, kinds='topic_recomendation_history'):
     pool.close()
     pool.terminate()
     return output_multprocessA
+
+
+def loadESHistory(uid_topid, es_client, esindex_name='transform_index', estype_name='transform_type'):
+    logger.info("len of uid_topid in loadESHistory: %d", len(uid_topid))
+
+    col_source = ["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]
+    doc = {
+        "query" : {
+                "bool" : {
+                    "must" : {
+                        "terms" : {
+                            "uid_topid" : uid_topid
+                        }
+                    }
+                }
+            },
+        '_source' : col_source
+       }
+    params = {"size":  len(uid_topid)}
+    res = es_client.search(index=esindex_name, doc_type=estype_name, body=doc, params=params)
+
+    hits = res['hits']['hits']
+    data = [hit["_source"] for hit in hits]
+    logger.info("len of data in loadESHistory: %d", len(data))
+
+    return pd.DataFrame(data, columns=col_source)
 
 
 def dict_to_datastore_taskMp(client, _kind, _identifier, _insertedData):
@@ -100,7 +120,8 @@ def outputMp(df, _kind):
 
     batch_size = 1000
     for cur_index in xrange(0, len(df), batch_size):
-        tasks = [dict_to_datastore_taskMp(client, _kind, "{}_{}".format(x['user_id'], x['topic_id']), x) for x in df[cur_index: cur_index + batch_size].T.to_dict().values()]
+        tasks = [dict_to_datastore_taskMp(client, _kind, "{}_{}".format(x['user_id'],
+                                          x['topic_id']), x) for x in df[cur_index: cur_index + batch_size].T.to_dict().values()]
         client.put_multi(tasks)
 
     return
@@ -117,7 +138,6 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     """
     start_total_time = time.time()
     logger.info("Saving by Multiprocess with 'put_multi' ..")
-    logger.info("Saving main Transform model to Google DataStore...")
 
     def _split_data(divider, df):
         n = df.shape[0] / divider
@@ -135,7 +155,7 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     index_list = _split_data(divider, df)
 
     cpu = 4
-    pool = mp.Pool(processes=cpu) 
+    pool = mp.Pool(processes=cpu)
     for df_temp in index_list:
         pool.apply_async(outputMp, args=(df_temp, kind, ))
 
@@ -147,23 +167,15 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
 
-def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type'):
-    logging.info("Saving main Transform model to Elasticsearch...")
+def saveElasticS(df, esp_client, esindex_name='transform_index', estype_name='transform_type'):
     start_total_time = time.time()
-
-    elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"
-    elastic_username = "elastic"
-    elastic_port = 9243
-    elastic_password = "W0y1miwmrSMZKkSIARzbxJgb"
 
     INDEX = esindex_name
     TYPE = estype_name
     df['indexId'] = (df.index + 100).astype(str)
-    esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
+
     logger.info("Bulk insert into ElasticSearch, chunksize=%d, time_out: %d" % (20000, 60))
-    logger.info("ElasticSearch host: %s", elastic_host)
-    logger.info("ElasticSearch port: %s", elastic_port)
-    logger.info(esp.es_write(df, INDEX, TYPE, chunksize=20000, rto=60))
+    logger.info(esp_client.es_write(df, INDEX, TYPE, chunksize=20000, rto=60))
 
     end_total_time = time.time() - start_total_time
     logger.info('Finish bulk insert to Eslastic Search, time taken: %.5f with total entity: %d' % (end_total_time, len(df)))

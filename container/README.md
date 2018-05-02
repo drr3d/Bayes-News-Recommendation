@@ -35,6 +35,25 @@ jangan lupa tanda titik di paling akhir dari command
     - gcloud container builds submit --tag gcr.io/kumparan-data/reco-cron-staging:v0.1.X .
 ```
 
+* build secret:
+```
+    - kubectl create secret generic your-secret-name --from-file=./topic-recommender-staging.json
+
+    - kubectl --namespace staging create secret generic topicreco-legacytrainer-service-account --from-file=./topic-recommender-staging.json --dry-run -o yaml | kubectl apply -f -
+
+    get list secret:
+    ---------------
+        - kubectl get secrets
+            atau
+        - kubectl get secret topicreco-legacytrainer-service-account -o yaml
+            atau
+        - kubectl --namespace staging get secrets
+
+    descibe secret:
+    --------------
+        - kubectl describe secrets/topicreco-legacytrainer-service-account
+```
+
 * jika sudah aman, ikuti
 
 [gitlab-kumparan](https://gitlab.kumparan.com/data/k8s-tutorial/blob/master/README.md "gitlab-kumparan")

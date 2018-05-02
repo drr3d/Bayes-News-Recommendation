@@ -148,8 +148,11 @@ class GBayesTopicRecommender(object):
         self.sum_all_nt = self.sum_all_nt.to_frame().reset_index()
         self.sum_all_nt = self.sum_all_nt.rename(columns={'num': 'sigma_Nt'})
 
+        # concat with history train
         if sigma_nt_hist is not None:
+            print "self.sum_all_nt before concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
             self.sum_all_nt = pd.concat([self.sum_all_nt, sigma_nt_hist]).groupby(['user_id'], as_index=False)['sigma_Nt'].sum()
+            print "self.sum_all_nt after concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
 
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
@@ -190,9 +193,13 @@ class GBayesTopicRecommender(object):
                 model = pd.merge(result2, sum_date_nt, on=['user_id', 'date'])
 
                 # joinprob_ci => p(category = ci | click) => D(u, t)
+                # karena NTotal adalah Nt pada periode t, maka tidak tergantung
+                #   pada data history
                 model['joinprob_ci'] = pd.eval('model.num_x / model.Ntotal')
 
             # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
             model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
 
             # posterior = p(click|category=ci)
@@ -260,29 +267,30 @@ class GBayesTopicRecommender(object):
         # ~ disini baru dilakukan concate dataframe
         if fitted_model_hist is not None:
             print "Combining current fitted_models with history..."
-            print "Fitted models before concat:\n", fitted_models.head(5)
-            print "len of current fitted models: %d" % len(fitted_models)
-            print "len of history fitted models: %d" % len(fitted_model_hist)
             
+            print "fitted_model_hist:\n"
+            print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
             fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
             print "len of fitted models after concat: %d" % len(fitted_models)
             print "Recalculating fitted models..."
+            """
+                Based on equation 4 and 7, dimana:
+                    sum(Ntotal x (joinprob_ci / model.p_cat_ci'))
+                  karena itu disini kita memerlukan data history untuk dikalkulasi
+            """
             fitted_models = fitted_models.groupby(['user_id',
                                                    'topic_id'])['pt_posterior_x_Nt'].agg('sum')
             fitted_models = fitted_models.reset_index()
-            
-            print "Fitted models after concat:\n", fitted_models.head(5)
 
             # its called smoothed because we add certain value of virtual click
             fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-            print "Fitted models after concat-simplify:\n", fitted_models.head(5)
+            print "fitted_models after cobine:\n"
+            print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
             print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
 
         fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
                                                                             cur_result2.p0_cat_ci)),
                                                                             na_action=0.)
-
-        print fitted_models.head(10)
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):

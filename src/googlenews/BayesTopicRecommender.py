@@ -148,8 +148,12 @@ class GBayesTopicRecommender(object):
         self.sum_all_nt = self.sum_all_nt.to_frame().reset_index()
         self.sum_all_nt = self.sum_all_nt.rename(columns={'num': 'sigma_Nt'})
 
+        # concat with history train
+        #   ini digunakan jika denominator dengan sigma_Nt bukan NTotal
         if sigma_nt_hist is not None:
-            self.sum_all_nt = pd.concat([self.sum_all_nt, sigma_nt_hist]).groupby(['user_id'], as_index=False)['sigma_Nt'].sum()
+            self.sum_all_nt = pd.concat([self.sum_all_nt,
+                                         sigma_nt_hist]).groupby(['user_id'],
+                                                                 as_index=False)['sigma_Nt'].sum()
 
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
@@ -190,9 +194,13 @@ class GBayesTopicRecommender(object):
                 model = pd.merge(result2, sum_date_nt, on=['user_id', 'date'])
 
                 # joinprob_ci => p(category = ci | click) => D(u, t)
+                # karena NTotal adalah Nt pada periode t, maka tidak tergantung
+                #   pada data history
                 model['joinprob_ci'] = pd.eval('model.num_x / model.Ntotal')
 
             # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
             model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
 
             # posterior = p(click|category=ci)
@@ -263,10 +271,14 @@ class GBayesTopicRecommender(object):
             print "Fitted models before concat:\n", fitted_models.head(5)
             print "len of current fitted models: %d" % len(fitted_models)
             print "len of history fitted models: %d" % len(fitted_model_hist)
-            
             fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
             print "len of fitted models after concat: %d" % len(fitted_models)
             print "Recalculating fitted models..."
+            """
+                Based on equation 4 and 7, dimana:
+                    sum(Ntotal x (joinprob_ci / model.p_cat_ci'))
+                  karena itu disini kita memerlukan data history untuk dikalkulasi
+            """
             fitted_models = fitted_models.groupby(['user_id',
                                                    'topic_id'])['pt_posterior_x_Nt'].agg('sum')
             fitted_models = fitted_models.reset_index()

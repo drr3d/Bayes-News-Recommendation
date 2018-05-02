@@ -1,0 +1,37 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    project: topic-recommender-v1
+    service: data_trainer
+  name: topic-reco-trainer-stag
+  namespace: staging
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          volumes:
+          - name: credentials
+            secret:
+              secretName: topicreco-legacytrainer-service-account
+          containers:
+          - name: reco-cron-staging
+            volumeMounts:
+            - name: credentials
+              mountPath: /secrets
+              readOnly: true
+            env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/secrets/topic-recommender-staging.json"
+            - name: STACKDRIVER_LOGGING_ENABLED
+              value: "1"
+            image: gcr.io/kumparan-data/reco-cron-staging:v0.1.X
+            resources:
+              limits:
+                memory: 8Gi
+              requests:
+                memory: 8Gi
+  schedule: 0 * * * *
+  successfulJobsHistoryLimit: 3

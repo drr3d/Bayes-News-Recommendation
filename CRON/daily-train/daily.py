@@ -10,14 +10,19 @@ import numpy as np
 import argparse
 import datetime
 import psutil
-from datetime import timedelta
-
 import pandas as pd
 import multiprocessing as mp
 
 from google.cloud import bigquery
 from googlenews.BayesTopicRecommender import GBayesTopicRecommender
+
+from elasticsearch import Elasticsearch
+from elasticsearch import RequestsHttpConnection
+from elasticsearch import helpers as EShelpers
+from datetime import timedelta
+
 import modelhandler as mh  # comment if you have another method for saving models
+from espandas import Espandas
 
 # logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 # logger = logging.getLogger(__name__)
@@ -41,6 +46,18 @@ from memory_profiler import LogFile
 import sys
 sys.stdout = LogFile('memory_profile6_log', reportIncrementFlag=False)
 # ~~~~~~~~~~~~~
+
+
+elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"
+elastic_username = "elastic"
+elastic_port = 9243
+elastic_password = "W0y1miwmrSMZKkSIARzbxJgb"
+
+logger.info("ElasticSearch host: %s", elastic_host)
+logger.info("ElasticSearch port: %s", elastic_port)
+es = Elasticsearch([elastic_host], port=elastic_port,
+                    http_auth=(elastic_username, elastic_password))
+esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
 
 pd.set_option('display.width', 1000)
 
@@ -77,20 +94,20 @@ def loadBQ(client, query, job_config, tabletype="history"):
     job_config.use_legacy_sql = False
     job_config.allowLargeResults = True
 
-    result  = client.query(query, job_config=job_config)
+    result = client.query(query, job_config=job_config)
     rows = result.result()
 
     col_name = [field.name for field in rows.schema]
-    
+
     def _q_iterator():
         for row in rows:
             yield list(row)
 
-    df = pd.DataFrame( _q_iterator() , columns=col_name)
-    
+    df = pd.DataFrame( _q_iterator(), columns=col_name)
+
     logger.info("size of df: %s", humanbytes(sys.getsizeof(df)))
     del result
- 
+
     return df
 
 def dateValidate(date_text):
@@ -134,7 +151,7 @@ def main(df_input, df_current, df_hist,
     t0 = time.time()
     logger.info("train on: %d total genuine interest data(D(u, t))", len(df_dut))
     logger.info("transform on: %d total current data(D(t))", len(df_dt))
-    logger.info("apply on: %d total history...)", len(df_hist))
+    logger.info("apply on: %d total history...", len(df_hist))
 
     # instantiace class
     BR = GBayesTopicRecommender(current_date, G=G)
@@ -149,10 +166,12 @@ def main(df_input, df_current, df_hist,
         num_y = total global click for category=ci on periode t
         num_x = total click from user_U for category=ci on periode t
     """
-    fitby_sigmant = True
+    fitby_sigmant = False
+    uniques_fit_hist = None
     df_input_X = result[['date', 'user_id',
                          'topic_id', 'num_x', 'num_y',
                          'is_general']]
+
     # get sigma_Nt from fitted_models_hist
     uniques_fit_hist = fitted_models_hist[['user_id', 'sigma_Nt']]
     logger.info("len of uniques_fit_hist:%d", len(uniques_fit_hist))
@@ -165,6 +184,7 @@ def main(df_input, df_current, df_hist,
                        sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
+    # print model_fit[['num_x', 'num_x', 'sigma_Nt', 'date_all_click']].loc[model_fit['user_id']=="1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157"].head(5)
 
     # ~~ and Transform ~~
     #   handling current news interest == current date
@@ -177,16 +197,17 @@ def main(df_input, df_current, df_hist,
     df_input_X = result[['date', 'user_id', 'topic_id',
                          'num_x', 'num_y', 'is_general']]
 
-    print "model_fit dtypes:\n", model_fit.dtypes
-    print "fitted_models_hist dtypes:\n", fitted_models_hist.dtypes
+    # print "model_fit dtypes:\n", model_fit.dtypes
+    # print "fitted_models_hist dtypes:\n", fitted_models_hist.dtypes
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
                                                   fitted_model_hist=fitted_models_hist[["pt_posterior_x_Nt",
                                                                                         "topic_id", "user_id"]],
                                                   verbose=False)
+
     # ~~~ filter is general and specific topic ~~~
     # the idea is just we need to rerank every topic according
-    # user_id and and is_general by p0_posterior
+    #    to user_id and and is_general by p0_posterior
     map_topic_isgeneral = df_dut[['topic_id',
                                   'is_general']].groupby(['topic_id',
                                                           'is_general']
@@ -207,6 +228,9 @@ def main(df_input, df_current, df_hist,
                                           (model_transform['p0_posterior'] > 0.)]
 
     train_time = time.time() - t0
+    print model_transform[model_transform['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
+    logger.info("Len of model_transform: %d", len(model_transform))
+    logger.info("Len of df_dt: %d", len(df_dt))
     logger.info("Total train time: %0.3fs", train_time)
 
     logger.info("memory left before cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
@@ -232,7 +256,17 @@ def main(df_input, df_current, df_hist,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'rank']].copy(deep=True)
+        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
+        model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
+        model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
+                                                   format='%Y-%m-%d', errors='coerce')
+        print "list(model_transformsv) before rename: ", list(model_transformsv) 
+        print model_transformsv[['date']].head(5)      
+        print len(model_transformsv)                
+        model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
+                                                              'rank':'interest_rank' , 'date':'interest_score_created_at'})
+        print "list(model_transformsv) after rename: ", list(model_transformsv)    
+        print len(model_transformsv) 
         del model_transform
         logger.info("deleting model_transform...")
         logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
@@ -243,14 +277,15 @@ def main(df_input, df_current, df_hist,
             logger.info("Using google datastore as storage...")
             if multproc:
                 # ~ save transform models ~
+                logger.info("Saving main Transform model to Google DataStore...")
+                logger.info("Saving total data: %d", len(model_transformsv))
                 mh.saveDataStorePutMulti(model_transformsv)
 
-                """
                 # ~ save fitted models ~
-                logger.info("Saving fitted_models as history...")
+                logger.info("Saving fitted_models as history to Google DataStore...")
                 save_sigma_nt = BR.sum_all_nt.copy(deep=True)
                 fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
-
+                logger.info("Saving total data: %d", len(fitted_models_sigmant))
                 X_split = np.array_split(fitted_models_sigmant, 10)
                 logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
                 for ix in range(len(X_split)):
@@ -261,14 +296,47 @@ def main(df_input, df_current, df_hist,
                 logger.info("deleting X_split...")
                 del save_sigma_nt
                 logger.info("deleting save_sigma_nt...")
-                """
 
                 del BR
                 logger.info("deleting BR...")
 
         elif str(saveto).lower() == "elastic":
             logger.info("Using ElasticSearch as storage...")
-            mh.saveElasticS(model_transformsv)
+            logging.info("Saving main Transform model to Elasticsearch...")
+            # print model_transformsv.head(5)
+            
+            X_split = np.array_split(model_transformsv, 15)
+            logger.info("Saving total data: %d", len(model_transformsv))
+            logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
+            for ix in range(len(X_split)):
+                logger.info("processing batch-%d", ix)
+                mh.saveElasticS(X_split[ix], esp)
+            del X_split
+            
+
+            logger.info("Saving fitted_models as history to Elasticsearch...")
+            save_sigma_nt = BR.sum_all_nt.copy(deep=True)
+            fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
+
+            fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
+            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
+  
+            X_split = np.array_split(fitted_models_sigmant, 25)
+            logger.info("Saving total data: %d", len(fitted_models_sigmant))
+            logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
+            for ix in range(len(X_split)):
+                logger.info("processing batch-%d", ix)
+                mh.saveElasticS(X_split[ix], esp,
+                                esindex_name="fitted_hist_index",
+                                estype_name='fitted_hist_type')
+            del X_split
+            
+            del BR
+            logger.info("deleting BR...")
+            del save_sigma_nt
+            logger.info("deleting save_sigma_nt...")
+            del fitted_models_sigmant
+            logger.info("deleting fitted_models_sigmant...")
 
         # need save sigma_nt for daily train
         # secara defaul perhitungan fit menggunakan sigma_Nt
@@ -290,7 +358,7 @@ def getBig(procdate, query_fit):
 
     logger.info("Collecting training data for date: %s", procdate)
     # ~ get genuine news interest ~
-    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 10000"
 
     # safe handling of query parameter
     query_params = [
@@ -309,7 +377,7 @@ def getBig(procdate, query_fit):
         return temp_df
 
 @profile
-def BQPreprocess(cpu, date_generated, client, query_fit):
+def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
     bq_client = client
     job_config = bigquery.QueryJobConfig()
 
@@ -321,36 +389,62 @@ def BQPreprocess(cpu, date_generated, client, query_fit):
         tframe = getBig(ndate.strftime("%Y-%m-%d"), query_fit)
         if tframe is not None:
             if not tframe.empty:
-                X_split = np.array_split(tframe, 5)
-                logger.info("Len of X_split for batch load: %d", len(X_split))
-                logger.info("Appending history data...")
-                for ix in range(len(X_split)):
-                    # ~ loading history
-                    """
-                        disini antara kita gabungkan dengan tframe, atau buat df sendiri
-                    """
-                    logger.info("processing batch-%d", ix)
-                    # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
-                    logger.info("creating list history data...")
-                    # lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
-                    lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
+                if loadfrom.strip().lower() == 'datastore':
+                    X_split = np.array_split(tframe, 5)
+                    logger.info("loading history data from datastore...")
+                    logger.info("Len of X_split for batch load: %d", len(X_split))
+                    logger.info("Appending history data...")
+                    for ix in range(len(X_split)):
+                        # ~ loading history
+                        """
+                            disini antara kita gabungkan dengan tframe, atau buat df sendiri
+                        """
+                        logger.info("processing batch-%d", ix)
+                        # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
+                        logger.info("creating list history data...")
+                        #lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
+                        lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
 
-                    logger.info("call history data...")
-                    h_frame = mh.loadDSHistory(lhistory)
+                        logger.info("call history data...")
+                        h_frame = mh.loadDSHistory(lhistory)
 
-                    # me = os.getpid()
-                    # kill_proc_tree(me)
+                        # me = os.getpid()
+                        # kill_proc_tree(me)
 
-                    logger.info("done collecting history data, appending now...")
-                    for m in h_frame:
-                        if m is not None:
-                            if len(m) > 0:
-                                datalist_hist.append(pd.DataFrame(m))
-                    del h_frame
-                    del lhistory
+                        logger.info("done collecting history data, appending now...")
+                        for m in h_frame:
+                            if m is not None:
+                                if len(m) > 0:
+                                    datalist_hist.append(pd.DataFrame(m))
+                        del h_frame
+                        del lhistory
 
-                logger.info("Appending training data...")
-                datalist.append(tframe)
+                    logger.info("Appending training data...")
+                    datalist.append(tframe)
+                elif loadfrom.strip().lower() == 'elastic':
+                    X_split = np.array_split(tframe, 25)
+                    logger.info("loading history data from elastic...")
+                    logger.info("Len of X_split for batch load: %d", len(X_split))
+                    logger.info("Appending history data...")
+                    
+                    for ix in range(len(X_split)):
+                        lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
+                        logger.info("call %d history data...", len(lhistory))
+                        inside_data = mh.loadESHistory(lhistory, es,
+                                                       esindex_name='fitted_hist_index',
+                                                       estype_name='fitted_hist_type')
+                        # split back the user_id and topic_id
+                        inside_data[['user_id','topic_id']] = inside_data.uid_topid.str.split('_', expand=True)
+                        inside_data = inside_data[["user_id","topic_id", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
+                        if not inside_data.empty:
+                            datalist_hist.append(inside_data)
+                            del inside_data
+                    
+                    logger.info("Appending training data...")
+                    datalist.append(tframe)
+                else:
+                    logger.info("Unknows source is selected !")
+                    break
         else: 
             logger.info("tframe for date: %s is empty", ndate.strftime("%Y-%m-%d"))
     logger.info("len datalist: %d", len(datalist))
@@ -370,11 +464,12 @@ def preprocess(cpu, cd, query_fit, date_generated):
         logger.info("Training cannot be empty..")
         return False
     big_frame_hist = pd.concat(datalist_hist)
-    print "big_frame_hist:\n", big_frame_hist.head(20)
+    logger.info("len of big_frame_hist: %s", len(big_frame_hist))
     logger.info("size of big_frame_hist: %s", humanbytes(sys.getsizeof(big_frame_hist)))
 
     big_frame = pd.concat(datalist)
     logger.info("size of big_frame: %s", humanbytes(sys.getsizeof(big_frame)))
+    logger.info("len of big_frame: %s", len(big_frame))
     del datalist
 
     big_frame['date'] = pd.to_datetime(big_frame['date'], format='%Y-%m-%d', errors='coerce')
@@ -386,7 +481,7 @@ def preprocess(cpu, cd, query_fit, date_generated):
         logger.info("getting total: %d training data(current date interest)" % (len(current_frame)))
     else:
         logger.info("Collecting training data(current date interest) using argument: %s", cd)
-        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
+        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 10000"
 
         # safe handling of query parameter
         query_params = [
@@ -463,7 +558,8 @@ if __name__ == "__main__":
                     """ + fit_table['topid_columnname'] + """ as topic_id,
                     """ + fit_table['isgeneral_columnname'] + """ as is_general,
                     """ + fit_table['topiccount_columnname'] + """ as num
-                    FROM `""" + fit_table['db_table_name'] + """` """
+                    FROM `""" + fit_table['db_table_name'] + """`
+                    """
 
                 query_transform = """SELECT
                     """ + transform_table['uid_columnname'] + """ as user_id,
@@ -471,12 +567,7 @@ if __name__ == "__main__":
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
                     """ + transform_table['topiccount_columnname'] + """ as num
                     FROM `""" + transform_table['db_table_name'] + """` CDH
-                    WHERE CDH.click_user_alias_id 
-                                IN (SELECT UTCL.user_alias_id AS user_alias_id
-                                    FROM `topic_recommender.users_total_click` UTCL
-                                    GROUP BY 1
-                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
-                                    )
+                    LIMIT 10000
                     """
 
         project_id = config["project_id"]
@@ -501,12 +592,7 @@ if __name__ == "__main__":
                               click_topic_is_general as is_general,
                               click_topic_count as num
                             FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
-                            WHERE CDH.click_user_alias_id 
-                                IN (SELECT UTCL.user_alias_id AS user_alias_id
-                                    FROM `topic_recommender.users_total_click` UTCL
-                                    GROUP BY 1
-                                    HAVING SUM(DISTINCT UTCL.user_total_click) > 4
-                                    )
+                            LIMIT 10000
                           """
 
     if G <= 0:
@@ -533,8 +619,10 @@ if __name__ == "__main__":
     logger.info("using start date: %s", start)
     logger.info("using end date: %s", date_1_days_ago.strftime('%Y-%m-%d'))
 
-    date_current =  datetime.datetime.now().date()
-    args.cd = None
+    # ~ jangan lupa di comment ini 2 line kebawah untuk live version
+    # date_current =  datetime.datetime.now().date()
+    # args.cd = None
+
     preprocess = preprocess(args.cpu, args.cd, query_fit, date_generated)
     if preprocess:
         big_frame, current_frame, big_frame_hist = preprocess

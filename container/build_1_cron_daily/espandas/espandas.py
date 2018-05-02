@@ -103,7 +103,6 @@ class Espandas(object):
             records = df.to_json(orient='records')
             records = json.loads(records)
             for record in records:
-                logger.info("generate_dict() using %.3f percent memory...", psutil.virtual_memory().percent)
                 yield record
 
         # The dataframe should be sorted by column name
