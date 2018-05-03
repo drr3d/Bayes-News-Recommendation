@@ -184,7 +184,7 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
 
-def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type'):
+def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type', ishist=False):
     start_total_time = time.time()
 
     elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"
@@ -194,7 +194,12 @@ def saveElasticS(df, esindex_name='transform_index', estype_name='transform_type
 
     INDEX = esindex_name
     TYPE = estype_name
-    df['indexId'] = (df.index + 100).astype(str)
+
+    if ishist:
+        df['indexId'] = df['uid_topid'].map(str)
+    else:
+        df['indexId'] = df["user_id"].map(str) + "_" + df["topic_id"].map(str)
+
     esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
     logger.info("Bulk insert into ElasticSearch, chunksize=%d, time_out: %d" % (20000, 60))
     logger.info("ElasticSearch host: %s", elastic_host)

@@ -12,8 +12,16 @@ spec:
     spec:
       template:
         spec:
+          volumes:
+          - name: credentials
+            secret:
+              secretName: topicreco-legacytrainer-service-account
           containers:
           - name: reco-cron-staging
+            volumeMounts:
+            - name: credentials
+              mountPath: /secrets
+              readOnly: true
             image: gcr.io/kumparan-data/reco-cron-staging:v0.1.X
             imagePullPolicy: Always
             resources:
@@ -23,14 +31,7 @@ spec:
                 memory: 8192Mi
             env:
               - name: GOOGLE_APPLICATION_CREDENTIALS
-                valueFrom:
-                  secretKeyRef:
-                    key: GOOGLE_APPLICATION_CREDENTIALS
-                    name: topicreco-legacytrainer-service-account
+                value: "/secrets/topic-recommender-staging.json"
               - name: STACKDRIVER_LOGGING_ENABLED
                 value: "1"
           restartPolicy: Never
-          volumes:
-            - name: trends-service-credentials
-              secret:
-                secretName: trends-service-credentials

@@ -1,7 +1,7 @@
 {
     "project_id":"kumparan-data",
     "G":10,
-    "N":20,
+    "N":23,
     "threshold":15,
     "fit_dbtable":{
         "db_table_name":"kumparan-data.topic_recommender.click_distribution_daily",

@@ -310,7 +310,7 @@ def main(df_input, df_current, df_hist,
             logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp)
+                mh.saveElasticS(X_split[ix], esp, ishist=False)
             del X_split
             
 
@@ -321,14 +321,15 @@ def main(df_input, df_current, df_hist,
             fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
             fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
   
-            X_split = np.array_split(fitted_models_sigmant, 25)
+            X_split = np.array_split(fitted_models_sigmant, 50)
             logger.info("Saving total data: %d", len(fitted_models_sigmant))
             logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
                 mh.saveElasticS(X_split[ix], esp,
                                 esindex_name="fitted_hist_index",
-                                estype_name='fitted_hist_type')
+                                estype_name='fitted_hist_type',
+                                ishist=True)
             del X_split
             
             del BR
@@ -358,7 +359,7 @@ def getBig(procdate, query_fit):
 
     logger.info("Collecting training data for date: %s", procdate)
     # ~ get genuine news interest ~
-    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 10000"
+    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 20000" 
 
     # safe handling of query parameter
     query_params = [
@@ -422,7 +423,7 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                     logger.info("Appending training data...")
                     datalist.append(tframe)
                 elif loadfrom.strip().lower() == 'elastic':
-                    X_split = np.array_split(tframe, 25)
+                    X_split = np.array_split(tframe, 50)
                     logger.info("loading history data from elastic...")
                     logger.info("Len of X_split for batch load: %d", len(X_split))
                     logger.info("Appending history data...")
@@ -433,12 +434,16 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                         inside_data = mh.loadESHistory(lhistory, es,
                                                        esindex_name='fitted_hist_index',
                                                        estype_name='fitted_hist_type')
-                        # split back the user_id and topic_id
-                        inside_data[['user_id','topic_id']] = inside_data.uid_topid.str.split('_', expand=True)
-                        inside_data = inside_data[["user_id","topic_id", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
-                        if not inside_data.empty:
+                        
+                        if inside_data is not None:
+                            # split back the user_id and topic_id
+                            inside_data[['user_id','topic_id']] = inside_data.uid_topid.str.split('_', expand=True)
+                            inside_data = inside_data[["user_id","topic_id", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
+                            logger.info("Appending %d data into datalist_hist..", len(inside_data))
                             datalist_hist.append(inside_data)
                             del inside_data
+                        else:
+                            logger.info("inside_data is None...")
                     
                     logger.info("Appending training data...")
                     datalist.append(tframe)
@@ -481,7 +486,7 @@ def preprocess(cpu, cd, query_fit, date_generated):
         logger.info("getting total: %d training data(current date interest)" % (len(current_frame)))
     else:
         logger.info("Collecting training data(current date interest) using argument: %s", cd)
-        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 10000"
+        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 20000"
 
         # safe handling of query parameter
         query_params = [
@@ -567,7 +572,7 @@ if __name__ == "__main__":
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
                     """ + transform_table['topiccount_columnname'] + """ as num
                     FROM `""" + transform_table['db_table_name'] + """` CDH
-                    LIMIT 10000
+                    LIMIT 20000
                     """
 
         project_id = config["project_id"]
@@ -592,7 +597,7 @@ if __name__ == "__main__":
                               click_topic_is_general as is_general,
                               click_topic_count as num
                             FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
-                            LIMIT 10000
+                            LIMIT 20000
                           """
 
     if G <= 0:

@@ -26,9 +26,9 @@ spec:
             imagePullPolicy: Always
             resources:
               requests:
-                memory: 2048Mi
+                memory: 1024Mi
               limits:
-                memory: 10248Mi
+                memory: 2048Mi
             env:
               - name: GOOGLE_APPLICATION_CREDENTIALS
                 value: "/secrets/topic-recommender-staging.json"

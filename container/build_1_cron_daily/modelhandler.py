@@ -62,13 +62,8 @@ def loadDSHistory(key_list, kinds='topic_recomendation_history'):
     logger.info("len of index_list: %d", len(index_list))
     logger.info("len of index_list per-unit: %d", len(index_list[:1]))
     logger.info("Begin get_multi of list history...")
-    # result = []
-    # https://cloud.google.com/datastore/docs/concepts/limits
-    # for keylist in index_list:
-    # result.append(client.get_multi(keys=keylist))
-    # yield client.get_multi(keys=keys[:1000])
 
-    cpu = 5
+    cpu = 3
     pool = mp.Pool(processes=cpu) 
     multprocessA = [pool.apply_async(_getBig, args=(keylist, )) for keylist in index_list]
 
@@ -105,7 +100,10 @@ def loadESHistory(uid_topid, es_client, esindex_name='transform_index', estype_n
     data = [hit["_source"] for hit in hits]
     logger.info("len of data in loadESHistory: %d", len(data))
 
-    return pd.DataFrame(data, columns=col_source)
+    if len(data) > 0:
+        return pd.DataFrame(data, columns=col_source)
+    else:
+        return None
 
 
 def dict_to_datastore_taskMp(client, _kind, _identifier, _insertedData):
@@ -167,12 +165,15 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
 
-def saveElasticS(df, esp_client, esindex_name='transform_index', estype_name='transform_type'):
+def saveElasticS(df, esp_client, esindex_name='transform_index', estype_name='transform_type', ishist=False):
     start_total_time = time.time()
 
     INDEX = esindex_name
     TYPE = estype_name
-    df['indexId'] = (df.index + 100).astype(str)
+    if ishist:
+        df['indexId'] = df['uid_topid'].map(str)
+    else:
+        df['indexId'] = df["user_id"].map(str) + "_" + df["topic_id"].map(str)
 
     logger.info("Bulk insert into ElasticSearch, chunksize=%d, time_out: %d" % (20000, 60))
     logger.info(esp_client.es_write(df, INDEX, TYPE, chunksize=20000, rto=60))

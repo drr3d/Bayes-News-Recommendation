@@ -184,7 +184,7 @@ def main(df_input, df_current, current_date, G,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
         model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
-        model_transformsv['date'] = current_date  # we need manually adding date, because table not support
+        model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
         model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
                                                    format='%Y-%m-%d', errors='coerce')         
         model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
@@ -231,7 +231,7 @@ def main(df_input, df_current, current_date, G,
             logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix])
+                mh.saveElasticS(X_split[ix], ishist=False)
             del X_split
 
             logger.info("Saving fitted_models as history to Elasticsearch...")
@@ -246,7 +246,7 @@ def main(df_input, df_current, current_date, G,
             logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esindex_name="fitted_hist_index",  estype_name='fitted_hist_type')
+                mh.saveElasticS(X_split[ix], esindex_name="fitted_hist_index",  estype_name='fitted_hist_type', ishist=True)
             del X_split
             
             del BR

@@ -112,11 +112,16 @@ class Espandas(object):
         df = df.reindex(sorted(df.columns), axis=1).copy()
         logger.info("reindex using %.3f percent memory...", psutil.virtual_memory().percent)
 
-        data = ({'_index': index,
+        
+        data = ({'_op_type': 'update',
+                 '_index': index,
                  '_type': doc_type,
                  '_id': record[index_name],
-                 '_source': record}
+                 'doc': {x: record[x] for x in record if x not in {index_name}},
+                 'doc_as_upsert': True}
                 for record in generate_dict(df))
+        logger.info("doc_as_upsert is True ~ Modified version + using op_type(update) !!")
+        
         del df
         logger.info("final espandas, using %.3f percent memory...", psutil.virtual_memory().percent)
         helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
