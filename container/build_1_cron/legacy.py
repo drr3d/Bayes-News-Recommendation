@@ -183,12 +183,12 @@ def main(df_input, df_current, current_date, G,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
+        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior']].copy(deep=True)
         model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
         model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
                                                    format='%Y-%m-%d', errors='coerce')         
         model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
-                                                              'rank':'interest_rank' , 'date':'interest_score_created_at'})
+                                                              'date':'interest_score_created_at'})
         del model_transform
         logger.info("deleting model_transform...")
         logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)

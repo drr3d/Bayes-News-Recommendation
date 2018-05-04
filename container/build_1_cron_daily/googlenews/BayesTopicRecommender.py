@@ -150,9 +150,7 @@ class GBayesTopicRecommender(object):
 
         # concat with history train
         if sigma_nt_hist is not None:
-            print "self.sum_all_nt before concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
             self.sum_all_nt = pd.concat([self.sum_all_nt, sigma_nt_hist]).groupby(['user_id'], as_index=False)['sigma_Nt'].sum()
-            print "self.sum_all_nt after concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
 
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
@@ -206,6 +204,8 @@ class GBayesTopicRecommender(object):
             #   => p(category = ci | click) / p(category = ci)
             model['posterior'] = pd.eval('model.joinprob_ci / model.p_cat_ci')
 
+        print "Testing on model Fit"
+        print model[["topic_id", "joinprob_ci", "p_cat_ci", "posterior"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
         return model
 
     def transform(self, df1, df2, fitted_model,
@@ -302,5 +302,17 @@ class GBayesTopicRecommender(object):
         # Zero value would occur for any topic_Ui if those topic
         #   do not have any click
         model = model.fillna(0.)
+
+        # validate if any final p0_posterior greater than 1:
+        exhausted_proba = model[["topic_id", "p0_posterior", "p0_cat_ci",
+                                 "smoothed_pt_posterior", "sigma_Nt"]].loc[(model["p0_posterior"] > 1.) &
+                                                                            (model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e")
+                                                                           ]
+        if len(exhausted_proba) > 0:
+            print "Warning, there are %d data that have final posterior more than 1." % len(exhausted_proba)
+            print "exhausted_proba:\n", exhausted_proba
+        else:
+            print "~ Empty exhausted_proba, thats good ~"
+        del exhausted_proba
 
         return model, fitted_models

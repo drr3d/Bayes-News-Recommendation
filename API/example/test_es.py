@@ -64,7 +64,7 @@ start_total_time = time.time()
 # ~ get some data ~
 # https://stackoverflow.com/questions/18695310/search-on-multiple-fields-with-elastic-search
 # col_source = ["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]
-col_source = ["user_id", "topic_id", "topic_is_general", "interest_score", "interest_rank"]  # , "interest_score_created_at"]
+col_source = ["user_id", "topic_id", "topic_is_general", "interest_score"]  # , "interest_score_created_at"]
 """
 doc = {
         "query": {
@@ -129,11 +129,11 @@ doc = {
                 }
             }
         }
-"""
+
 doc = {
         "query": {
             "match": {
-                "user_id": "162747f79e55a-02e2ea15823949-356f4b4e-38400-162747f79e723"
+                "user_id": "1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"
             }
         },
         '_source' : col_source
@@ -150,11 +150,13 @@ hits = res['hits']['hits']
 data = [hit["_source"] for hit in hits]
 # print data
 df = pd.DataFrame(data, columns=col_source)
-df = df.sort_values(['user_id', 'topic_is_general', 'interest_rank'], ascending=[True, False, True])
+# df = df.sort_values(['user_id', 'topic_is_general'], ascending=[True, False])
+df['rank'] = df.groupby(['user_id', 'topic_is_general'])['interest_score'].rank(ascending=False)
+df = df.sort_values(['topic_is_general', 'rank'], ascending=[False, True])
 print df
 end_total_time = time.time() - start_total_time
 print 'Time taken to transform output: %.7f' % end_total_time
-
+"""
 
 # ~ delete index ~
 # es.indices.delete(index='fitted_hist_index')
@@ -194,7 +196,6 @@ request_body = {
                 "topic_id" : { "type": "keyword" },
                 "topic_is_general": { "type": "boolean"},
                 "interest_score": { "type": "double" },
-                "interest_rank": { "type": "integer" },
                 "interest_score_created_at": { "type": "date" }
             }
         }

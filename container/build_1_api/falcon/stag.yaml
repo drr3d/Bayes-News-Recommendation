@@ -1,0 +1,41 @@
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: topic-reco-falconapi
+  namespace: staging
+  labels:
+    project: topic-recommenderapi-v1
+    service: topicreco_falconapi_service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      project:  topic-recommenderapi-v1
+      service: topicreco_falconapi_service
+  template:
+    metadata:
+      name: topic-reco-falconapi
+      namespace: staging
+      labels:
+        project: topic-recommenderapi-v1
+        service: topicreco_falconapi_service
+    spec:
+      containers:
+      - name: reco-apifalcon-staging
+        image: gcr.io/kumparan-data/reco-apifalcon-staging:v0.1.X
+        ports:
+          - containerPort: 8995
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: 1024Mi
+          limits:
+            memory: 2048Mi
+        env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: "/kum_topicreco_api/src/topic-recommender-staging.json"
+          - name: STACKDRIVER_LOGGING_ENABLED
+            value: "1"
+          - name: DEBUG_MODE
+            value: "1"
+      restartPolicy: Always

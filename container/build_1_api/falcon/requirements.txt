@@ -1,0 +1,9 @@
+certifi==2018.4.16
+falcon==1.4.1
+requests==2.18.4
+pandas==0.22.0
+protobuf==3.5.2.post1
+requests_aws4auth==0.9
+google-cloud==0.32.0
+elasticsearch==6.2.0
+gunicorn==19.6.0

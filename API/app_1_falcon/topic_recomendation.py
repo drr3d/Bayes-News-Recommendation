@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-import falcon, MySQLdb, time, json, datetime, re, pandas as pd, google.cloud.exceptions, sys
+import falcon, time, json, datetime, re, pandas as pd, google.cloud.exceptions, sys
 
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from connection.datastore import *
@@ -37,7 +37,7 @@ class TopicRecomendationResourceDataStore(object):
             entity = self.datastore_conn._ds_batch_lookup(self.kind, keys)
             results_dicts = []
             for row in entity:
-                results_dicts.append(row)
+                results_dicts.append(self.normalize._reco_topic_map_compact_ver(row))
 
         except Exception as ex:
             results_dicts = {"Can't lookup data" : str(ex.message)}
@@ -121,7 +121,7 @@ class TopicRecomendationResourceDataStore(object):
             entity = self.datastore_conn._ds_list(self.kind)
             results_dicts = []
             for row in entity:
-                results_dicts.append(row)
+                results_dicts.append(self.normalize._reco_topic_map_compact_ver(row))
 
         except Exception as ex:
             results_dicts = {"Can't lookup data" : str(ex.message)}
@@ -132,10 +132,7 @@ class TopicRecomendationResourceDataStore(object):
         ''' Handling get list of data limited to 20 entities from datastore '''
 
         try:
-            entity = self.datastore_conn._ds_list_keys(self.kind)
-            results_dicts = []
-            for row in entity:
-                results_dicts.append({row})
+            results_dicts = self.datastore_conn._ds_list_keys(self.kind)
 
         except Exception as ex:
             results_dicts = {"Can't lookup data" : str(ex.message)}
@@ -196,11 +193,90 @@ class TopicRecomendationResourceElasticSearch(object):
     """
 
     def __init__(self):
-        self.index = 'topic_recomendations'
-        self.type = 'topic_recomendation'
-        self.connection = ElasticSearchAPI()
-        self.es = self.connection._es_connection_aws_server(Elasticsearch, RequestsHttpConnection)
+        self.index = 'transform_index'
+        self.type = 'transform_type'
+        self.connection = ElasticSearchAPITest()
+        self.es = self.connection._es_connection_gcp(Elasticsearch)
         self.normalize = Normalize()
+
+    def _list(self):
+        ''' Handling task for get all entities data from elastic search '''
+
+        try:
+            entity = self.es.search(index=self.index, body={"query":{"match_all":{}}})
+            results_dicts = { "reco_topic" : entity }
+        except Exception as ex:
+            results_dicts = {"Can't show data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _query(self, _query):
+        ''' Handling query for get entities data from elastic search '''
+
+        try:
+            entity = self.es.search(index=self.index, body=_query)
+            results_dicts = { "reco_topic" : entity }
+        except Exception as ex:
+            results_dicts = {"Can't show data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _query_by_fields(self, _key, _val):
+        ''' Handling query for get entities data from elastic search '''
+
+        try:
+            entity = self.es.search(index=self.index, doc_type=self.type, body={"query":{"match":{_key:_val}},"sort":[{"topic_interest_score":{"order":"asc"}}],"from":0,"size":100})
+            results_dicts = { "reco_topic" : entity }
+        except Exception as ex:
+            results_dicts = {"Can't show data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _lookup(self, _id):
+        ''' Handling lookup entities data from elastic search '''
+
+        try:
+            entity = self.es.search(index=self.index, doc_type=self.type, body={"query":{"match":{"_id":str(_id)}},"from":0,"size":100})
+            results_dicts = { "reco_topic" : entity }
+        except Exception as ex:
+            results_dicts = {"Can't lookup data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _remove(self, _id):
+        ''' Handling remove entities data from elastic search '''
+
+        try:
+            self.es.delete(index=self.index, doc_type=self.type, id=_id)
+            results_dicts = { "Success remove id " : _id }
+        except Exception as ex:
+            results_dicts = {"Can't remove data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _update(self, _id, _data):
+        ''' Handling update entities data elastic search '''
+
+        try:
+            self.es.update(index=self.index, doc_type=self.type, id=_id, body=_data)
+            results_dicts = { "Success update id " : _id }
+        except Exception as ex:
+            results_dicts = {"Can't update data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
+
+    def _insert(self, _identifier, _data):
+        ''' Handling add entities data to elastic search '''
+
+        try:
+            self.es.index(index=self.index, doc_type=self.type, id=_identifier, body=_data)
+            lookup_entity = self._lookup(self.es, _identifier)
+            results_dicts = { "reco_topic" : lookup_entity }
+
+        except Exception as ex:
+            results_dicts = {"Can't insert data" : str(ex.message)}
+
+        return { "topic_recomendation" : results_dicts }
 
     def on_post(self, req, resp):
         """
@@ -212,79 +288,37 @@ class TopicRecomendationResourceElasticSearch(object):
 
         action = req.get_param('action') or ''
 
+        start_time = time.time()
+
         try:
             raw_json = json.loads(req.stream.read())
         except Exception as e:
             resp.body = json.dumps('Something error : {}'.format(str(e)), encoding='utf-8')
 
-        if action == 'add':
-            ''' Handling add entities data to elastic search '''
-
-            try:
-                # data = self.normalize._reco_topic_map(raw_json)
-                entity = self.connection._insert(self.es, self.index, self.type, str(raw_json['user_id']) + '_' + str(raw_json['topic_id']), data)
-                lookup_entity = self.connection._lookup(self.es, self.index, self.type, str(raw_json['user_id']) + '_' + str(raw_json['topic_id']))
-                results_dicts = { "reco_topic" : lookup_entity }
-
-            except Exception as ex:
-                results_dicts = {"Can't insert data" : str(ex.message)}
-
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
-
-        elif action == 'set':
-            ''' Handling update entities data elastic search '''
-
-            try:
-                entity = self.connection._update(self.es, self.index, self.type, raw_json['doc']['id'], raw_json)
-                results_dicts = { "Success update id " : raw_json['doc']['id'] }
-
-            except Exception as ex:
-                results_dicts = {"Can't update data" : str(ex.message)}
-
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
-
-        elif action == 'remove':
-            ''' Handling remove entities data from elastic search '''
-
-            try:
-                entity = self.connection._delete(self.es, self.index, self.type, raw_json['id'])
-                results_dicts = { "Success remove id " : raw_json['id'] }
-
-            except Exception as ex:
-                results_dicts = {"Can't remove data" : str(ex.message)}
-
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
-
-        elif action == 'lookup':
-            ''' Handling lookup entities data from elastic search '''
-
-            try:
-                entity = self.connection._lookup(self.es, self.index, self.type, str(raw_json['id']))
-                results_dicts = { "reco_topic" : entity }
-
-            except Exception as ex:
-                results_dicts = {"Can't lookup data" : str(ex.message)}
-
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
+        if action == 'lookup':
+            results = self._lookup(raw_json['id'])
 
         elif action == 'query':
-            ''' Handling query for get entities data from elastic search '''
+            results = self._query(raw_json)
 
-            try:
-                entity = self.connection._query(self.es, self.index, self.type, raw_json)
-                results_dicts = { "reco_topic" : entity }
+        elif action == 'query_fields':
+            _key = raw_json.keys()
+            _val = raw_json[_key[0]]
+            results = self._query_by_fields(_key[0], _val)
 
-            except Exception as ex:
-                results_dicts = {"Can't show data" : str(ex.message)}
+        elif action == 'add':
+            results = self._add(str(raw_json['user_id']) + '_' + str(raw_json['topic_id']), raw_json)
 
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
+        elif action == 'update':
+            results = self._update(raw_json['doc']['id'], raw_json['data'])
+
+        elif action == 'remove':
+            results = self._remove(raw_json['id'])
 
         else:
-            try:
-                entity = self.connection._list(self.es, self.index)
-                results_dicts = { "reco_topic" : entity }
+            results = self._list()
 
-            except Exception as ex:
-                results_dicts = {"Can't show data" : str(ex.message)}
+        end_time = time.time() - start_time
+        dict = json.dumps(results, encoding='utf-8')
 
-            resp.body = json.dumps(results_dicts, encoding='utf-8')
+        resp.body = '{} \n \n Execution time : {} '.format(dict, end_time)

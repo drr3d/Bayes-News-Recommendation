@@ -260,4 +260,10 @@ class GBayesTopicRecommender(object):
         #   do not have any click
         model = model.fillna(0.)
 
+        exhausted_proba = model[["user_id", "topic_id", "p0_posterior"]].loc[model["p0_posterior"] > 1.]
+        if len(exhausted_proba) > 0:
+            print "Warning, there are %d data that have final posterior more than 1." % len(exhausted_proba)
+            print "exhausted_proba:\n", exhausted_proba
+        else:
+            print "There is NONE of final posterior that have value more than 1. "
         return model, fitted_models

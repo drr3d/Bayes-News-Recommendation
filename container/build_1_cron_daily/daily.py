@@ -17,7 +17,6 @@ from google.cloud import bigquery
 from googlenews.BayesTopicRecommender import GBayesTopicRecommender
 
 from elasticsearch import Elasticsearch
-from elasticsearch import RequestsHttpConnection
 from elasticsearch import helpers as EShelpers
 from datetime import timedelta
 
@@ -99,13 +98,6 @@ def dateValidate(date_text):
         return True
     except ValueError:
         raise ValueError("Incorrect data format, should be YYYY-MM-DD")
-
-def kill_proc_tree(pid, including_parent=False):    
-    parent = psutil.Process(pid)
-    for child in parent.children(recursive=True):
-        child.kill()
-    if including_parent:
-        parent.kill()
 
 def main(df_input, df_current, df_hist,
          current_date, G, project_id,
@@ -230,13 +222,13 @@ def main(df_input, df_current, df_hist,
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
+        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior']].copy(deep=True)
         model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
         model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
                                                    format='%Y-%m-%d', errors='coerce')
               
         model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
-                                                              'rank':'interest_rank' , 'date':'interest_score_created_at'})
+                                                              'date':'interest_score_created_at'})
 
         del model_transform
         logger.info("deleting model_transform...")

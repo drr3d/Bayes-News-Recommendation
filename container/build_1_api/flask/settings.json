@@ -1,0 +1,12 @@
+{
+    "elastic":{
+        "hostname":"https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io",
+        "username":"elastic",
+        "password":"W0y1miwmrSMZKkSIARzbxJgb",
+        "port":9243
+    },
+    "gdatastore":{
+        "kind":"topic_recomendation",
+        "projectid":"kumparan-data"
+    }
+}

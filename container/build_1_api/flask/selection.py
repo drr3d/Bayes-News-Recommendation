@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 
 
 class Selections(Resource):
-    def __init__(self, client, kind):
+    def __init__(self, client, kind, es_client):
         self.client = client
         self.kind = kind
+        self.es_client = es_client
         self.reqparse = reqparse.RequestParser()
         self.reqparse.add_argument('uid', type=str, required=True, location='json',
                                    help='User Id to fetch ranked topic recommender')
@@ -43,27 +44,51 @@ class Selections(Resource):
         orient = str(args['orient']).strip()
         storage = str(args['storage']).strip()
 
-        logger.info("Begin querying datastore...")
-        start_total_time = time.time()
+        start_all_time = time.time()
+        if storage.strip().lower() == "datastore":
+            logger.info("Begin querying datastore...")
+            start_total_time = time.time()
 
-        client = self.client
-        kind = self.kind
-        iterator = self.basic_query(client, kind, uid)
+            client = self.client
+            kind = self.kind
+            iterator = self.basic_query(client, kind, uid)
 
-        end_total_time = time.time() - start_total_time
-        logger.info('Time taken to querying datastore: %.7f', end_total_time)
+            end_total_time = time.time() - start_total_time
+            logger.info('Time taken to querying datastore: %.7f', end_total_time)
+            
+            logger.info("Begin transform output...")
+            
+            user_data = []
+            for d in iterator:
+                user_data.append([d["topic_id"], d["is_general"], d["rank"], d["p0_posterior"]])
+
+            A = pd.DataFrame(user_data, columns=["topic_id", "is_general", "rank", "p0_posterior"])
+            A = A.sort_values(['is_general', 'rank'], ascending=[False, True])
+
+        elif storage.strip().lower() == "elastic":
+            logger.info("Begin querying elastic...")
+            esclient = self.es_client
+            col_source = ["user_id", "topic_id", "topic_is_general", "interest_score"]
+            doc = {
+                    "query": {
+                        "match": {
+                            "user_id": uid
+                        }
+                    },
+                    '_source' : col_source
+                }
+
+            params = {"size":  30}
+            res = esclient.search(index='transform_index', doc_type='transform_type', body=doc, params=params)
+
+            hits = res['hits']['hits']
+            data = [hit["_source"] for hit in hits]
+            A = pd.DataFrame(data, columns=col_source)
+            A['rank'] = A.groupby(['user_id', 'topic_is_general'])['interest_score'].rank(ascending=False)
+            A = A.sort_values(['topic_is_general', 'rank'], ascending=[False, True])
         
-        logger.info("Begin transform output...")
-        start_total_time = time.time()
-        user_data = []
-        for d in iterator:
-            user_data.append([d["topic_id"], d["is_general"], d["rank"], d["p0_posterior"]])
-
-        A = pd.DataFrame(user_data, columns=["topic_id", "is_general", "rank", "p0_posterior"])
-        A = A.sort_values(['is_general', 'rank'], ascending=[False, True])
-
-        end_total_time = time.time() - start_total_time
-        logger.info('Time taken to transform output: %.7f', end_total_time)
+        end_all_time = time.time() - start_all_time
+        print 'Time taken to transform output: %.7f' % end_all_time
 
         ### Construct JSON output
         if orient == 'list':
