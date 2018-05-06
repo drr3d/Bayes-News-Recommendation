@@ -119,8 +119,10 @@ def main(df_input, df_current, current_date, G,
     df_input_X = result[['date', 'user_id',
                          'topic_id', 'num_x', 'num_y',
                          'is_general']]
+    # agar sama dengan hasil hitungan si bos, maka
+    #  set full_bayes = False
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=False, use_sigmant=fitby_sigmant,
+                       full_bayes=True, use_sigmant=fitby_sigmant,
                        verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))

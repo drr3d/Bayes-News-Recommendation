@@ -148,10 +148,10 @@ def main(df_input, df_current, df_hist,
     logger.info("len of uniques_fit_hist:%d", len(uniques_fit_hist))
     uniques_fit_hist = uniques_fit_hist.drop_duplicates(subset=['user_id','sigma_Nt'])
     logger.info("len of uniques_fit_hist after drop duplicate:%d", len(uniques_fit_hist))
-
+    # uniques_fit_hist = None
     # begin fit
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=False, use_sigmant=fitby_sigmant,
+                       full_bayes=True, use_sigmant=fitby_sigmant,
                        sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
@@ -167,13 +167,18 @@ def main(df_input, df_current, df_hist,
 
     df_input_X = result[['date', 'user_id', 'topic_id',
                          'num_x', 'num_y', 'is_general']]
-
+    
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
                                                   fitted_model_hist=fitted_models_hist[["pt_posterior_x_Nt",
                                                                                         "topic_id", "user_id"]],
                                                   verbose=False)
-
+    """
+    model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
+                                                fitted_model=model_fit,
+                                                fitted_model_hist=None,
+                                                verbose=False)
+    """
     # ~~~ filter is general and specific topic ~~~
     # the idea is just we need to rerank every topic according
     #    to user_id and and is_general by p0_posterior

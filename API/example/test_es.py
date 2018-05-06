@@ -159,7 +159,7 @@ print 'Time taken to transform output: %.7f' % end_total_time
 """
 
 # ~ delete index ~
-# es.indices.delete(index='fitted_hist_index')
+es.indices.delete(index='transform_index')
 # es.indices.create(index=index, body=body)
 
 """
@@ -182,7 +182,7 @@ request_body = {
         }
     }
 }
-
+"""
 INDEX_NAME = "transform_index"
 request_body = {
     "settings" : {
@@ -204,7 +204,7 @@ request_body = {
 
 print("creating '%s' index..." % (INDEX_NAME))
 res = es.indices.create(index = INDEX_NAME, body = request_body)
-"""
+
 
 # ~ update data ~
 """print "\nTry update data"

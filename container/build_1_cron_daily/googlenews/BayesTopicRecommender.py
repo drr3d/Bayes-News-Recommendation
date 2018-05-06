@@ -155,6 +155,7 @@ class GBayesTopicRecommender(object):
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
             # ~~~~~
+            print "Using FULL BAYES!!"
             user_marginal_click = result2.groupby(['date', 'user_id'])['num_y'].agg('sum')
             user_marginal_click = user_marginal_click.to_frame().reset_index()
             user_marginal_click = user_marginal_click.rename(columns={'num_y': 'num_y_marg'})
@@ -168,15 +169,14 @@ class GBayesTopicRecommender(object):
             model['joinprob_ci'] = pd.eval('model.num_x / model.num_y_marg')
             model['joinprob_notci'] = pd.eval('(model.num_y - model.num_x) / model.num_y_marg')
 
+            # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
+            model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
+            
             # Next dev, should be more dynamic in handling
             #   marginal likelihood of multiple event.
-            model['posterior'] = pd.eval('''
-            ((model.joinprob_ci / model.p_click) * model.p_click) /
-            (
-                ((model.joinprob_ci / model.p_click) * model.p_click) +
-                ((model.joinprob_notci / model.p_notclick) * model.p_notclick)
-             )
-            ''')
+            model['posterior'] = pd.eval('''((model.joinprob_ci / model.p_click) * model.p_click) /(((model.joinprob_ci / model.p_click) * model.p_click) + ((model.joinprob_notci / model.p_notclick) * model.p_notclick))''')
 
         else:
             # ~~~~~
@@ -205,7 +205,7 @@ class GBayesTopicRecommender(object):
             model['posterior'] = pd.eval('model.joinprob_ci / model.p_cat_ci')
 
         print "Testing on model Fit"
-        print model[["topic_id", "joinprob_ci", "p_cat_ci", "posterior"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
+        print model[["topic_id", "joinprob_ci", "p_cat_ci", "posterior", "Ntotal"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
         return model
 
     def transform(self, df1, df2, fitted_model,
@@ -257,20 +257,24 @@ class GBayesTopicRecommender(object):
         #    > sigma_Nt
         fitted_models['pt_posterior_x_Nt'] = pd.eval('fitted_models.posterior * fitted_models.Ntotal')
         fitted_models = fitted_models.groupby(['user_id',
-                                               'topic_id'])['pt_posterior_x_Nt'].agg('sum')
+                                                'topic_id'])['pt_posterior_x_Nt'].agg('sum')
         fitted_models = fitted_models.reset_index()
 
         # its called smoothed because we add certain value of virtual click
-        fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
+        # ~~ coba dimatikan, taro di paing akhir dulu 2018-05-04 ~~
+        # fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
         print "Len of fitted_models on main class: %d" % len(fitted_models)
 
         # ~ disini baru dilakukan concate dataframe
         if fitted_model_hist is not None:
             print "Combining current fitted_models with history..."
-            
-            print "fitted_model_hist:\n"
+            print "fitted_models:"
+            print fitted_models.head(3)
+            print "fitted_model_hist:"
+            print fitted_model_hist.head(3)
             fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
             print "len of fitted models after concat: %d" % len(fitted_models)
+
             print "Recalculating fitted models..."
             """
                 Based on equation 4 and 7, dimana:
@@ -279,11 +283,11 @@ class GBayesTopicRecommender(object):
             """
             fitted_models = fitted_models.groupby(['user_id',
                                                    'topic_id'])['pt_posterior_x_Nt'].agg('sum')
+
             fitted_models = fitted_models.reset_index()
 
-            # its called smoothed because we add certain value of virtual click
-            fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-
+        # its called smoothed because we add certain value of virtual click
+        fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
         fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
                                                                             cur_result2.p0_cat_ci)),
                                                                             na_action=0.)
@@ -304,13 +308,14 @@ class GBayesTopicRecommender(object):
         model = model.fillna(0.)
 
         # validate if any final p0_posterior greater than 1:
-        exhausted_proba = model[["topic_id", "p0_posterior", "p0_cat_ci",
-                                 "smoothed_pt_posterior", "sigma_Nt"]].loc[(model["p0_posterior"] > 1.) &
-                                                                            (model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e")
-                                                                           ]
+        exhausted_proba = model[["user_id", "topic_id", "pt_posterior_x_Nt",
+                                 "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]].loc[model["p0_posterior"] > 1.]
+        print model[["user_id", "topic_id", "pt_posterior_x_Nt",
+                     "smoothed_pt_posterior", "p0_cat_ci",
+                     "sigma_Nt"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
         if len(exhausted_proba) > 0:
             print "Warning, there are %d data that have final posterior more than 1." % len(exhausted_proba)
-            print "exhausted_proba:\n", exhausted_proba
+            print "exhausted_proba:\n", exhausted_proba.head(15)
         else:
             print "~ Empty exhausted_proba, thats good ~"
         del exhausted_proba

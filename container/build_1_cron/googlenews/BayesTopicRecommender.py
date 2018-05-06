@@ -144,6 +144,7 @@ class GBayesTopicRecommender(object):
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
             # ~~~~~
+            print "Using FULL BAYES!!"
             user_marginal_click = result2.groupby(['date', 'user_id'])['num_y'].agg('sum')
             user_marginal_click = user_marginal_click.to_frame().reset_index()
             user_marginal_click = user_marginal_click.rename(columns={'num_y': 'num_y_marg'})
@@ -157,15 +158,14 @@ class GBayesTopicRecommender(object):
             model['joinprob_ci'] = pd.eval('model.num_x / model.num_y_marg')
             model['joinprob_notci'] = pd.eval('(model.num_y - model.num_x) / model.num_y_marg')
 
+            # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
+            model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
+
             # Next dev, should be more dynamic in handling
             #   marginal likelihood of multiple event.
-            model['posterior'] = pd.eval('''
-            ((model.joinprob_ci / model.p_click) * model.p_click) /
-            (
-                ((model.joinprob_ci / model.p_click) * model.p_click) +
-                ((model.joinprob_notci / model.p_notclick) * model.p_notclick)
-             )
-            ''')
+            model['posterior'] = pd.eval('''((model.joinprob_ci / model.p_click) * model.p_click) /(((model.joinprob_ci / model.p_click) * model.p_click) + ((model.joinprob_notci / model.p_notclick) * model.p_notclick))''')
 
         else:
             # ~~~~~

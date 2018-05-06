@@ -261,7 +261,8 @@ class GBayesTopicRecommender(object):
         fitted_models = fitted_models.reset_index()
 
         # its called smoothed because we add certain value of virtual click
-        fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
+        # ~~ coba dimatikan, taro di paing akhir dulu 2018-05-04 ~~
+        # fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
         print "Len of fitted_models on main class: %d" % len(fitted_models)
 
         # ~ disini baru dilakukan concate dataframe
@@ -282,11 +283,11 @@ class GBayesTopicRecommender(object):
                                                    'topic_id'])['pt_posterior_x_Nt'].agg('sum')
             fitted_models = fitted_models.reset_index()
 
-            # its called smoothed because we add certain value of virtual click
-            fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-            print "fitted_models after cobine:\n"
-            print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
-            print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
+        # its called smoothed because we add certain value of virtual click
+        fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
+        print "fitted_models after cobine:\n"
+        print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
+        print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
 
         fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
                                                                             cur_result2.p0_cat_ci)),
