@@ -1,9 +1,9 @@
 {
     "elastic":{
-        "hostname":"https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io",
-        "username":"elastic",
-        "password":"W0y1miwmrSMZKkSIARzbxJgb",
-        "port":9243
+        "hostname":"10.23.255.51",
+        "username":"",
+        "password":"",
+        "port":9200
     },
     "gdatastore":{
         "kind":"topic_recomendation",

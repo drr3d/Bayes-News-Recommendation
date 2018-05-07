@@ -27,16 +27,18 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=lo
 logger = logging.getLogger(__name__)
 
 
-elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"
-elastic_username = "elastic"
-elastic_port = 9243
-elastic_password = "W0y1miwmrSMZKkSIARzbxJgb"
+elastic_host = "10.23.255.51"
+elastic_port = 9200
 
 logger.info("ElasticSearch host: %s", elastic_host)
 logger.info("ElasticSearch port: %s", elastic_port)
+"""
 es = Elasticsearch([elastic_host], port=elastic_port,
                     http_auth=(elastic_username, elastic_password))
 esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
+"""
+es = Elasticsearch([elastic_host], port=elastic_port)
+esp = Espandas(hosts=[elastic_host], port=elastic_port)
 
 pd.set_option('display.width', 1000)
 
@@ -151,7 +153,7 @@ def main(df_input, df_current, df_hist,
     # uniques_fit_hist = None
     # begin fit
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=True, use_sigmant=fitby_sigmant,
+                       full_bayes=False, use_sigmant=fitby_sigmant,
                        sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))

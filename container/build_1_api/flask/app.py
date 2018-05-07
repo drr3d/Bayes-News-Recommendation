@@ -23,7 +23,7 @@ api = Api(app)
 
 # ~ open config file
 dir_path = os.path.dirname(os.path.realpath(__file__))
-file_path = "\\"
+file_path = "/"
 with open(dir_path + file_path + "settings.json", 'r') as f:
     config = json.load(f)
     es_host = config['elastic']['hostname']
@@ -36,8 +36,11 @@ with open(dir_path + file_path + "settings.json", 'r') as f:
 
 
 client = datastore.Client(project_id)
-es = Elasticsearch([es_host], port=es_port, 
-                    http_auth=(es_username, es_password))
+if es_username.strip() == "":
+    es = Elasticsearch([es_host], port=es_port)
+else:
+    es = Elasticsearch([es_host], port=es_port, 
+                        http_auth=(es_username, es_password))
 
 # ~ add api resource
 api.add_resource(Selections, '/api/selection', endpoint = 'sentselection',

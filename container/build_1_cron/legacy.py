@@ -15,6 +15,10 @@ import pandas as pd
 import multiprocessing as mp
 import gc
 
+from elasticsearch import Elasticsearch
+from elasticsearch import helpers as EShelpers
+from espandas import Espandas
+
 from google.cloud import bigquery
 from googlenews.BayesTopicRecommender import GBayesTopicRecommender
 import modelhandler as mh  # comment if you have another method for saving models
@@ -24,6 +28,14 @@ logger = logging.getLogger(__name__)
 
 bq_client = bigquery.Client()
 job_config = bigquery.QueryJobConfig()
+
+elastic_host = "10.23.255.51"
+elastic_port = 9200
+
+logger.info("ElasticSearch host: %s", elastic_host)
+logger.info("ElasticSearch port: %s", elastic_port)
+es = Elasticsearch([elastic_host], port=elastic_port)
+esp = Espandas(hosts=[elastic_host], port=elastic_port)
 
 pd.set_option('display.width', 1000)
 
@@ -122,7 +134,7 @@ def main(df_input, df_current, current_date, G,
     # agar sama dengan hasil hitungan si bos, maka
     #  set full_bayes = False
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=True, use_sigmant=fitby_sigmant,
+                       full_bayes=False, use_sigmant=fitby_sigmant,
                        verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
@@ -233,7 +245,7 @@ def main(df_input, df_current, current_date, G,
             logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], ishist=False)
+                mh.saveElasticS(X_split[ix], esp, ishist=False)
             del X_split
 
             logger.info("Saving fitted_models as history to Elasticsearch...")
@@ -248,7 +260,7 @@ def main(df_input, df_current, current_date, G,
             logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esindex_name="fitted_hist_index",  estype_name='fitted_hist_type', ishist=True)
+                mh.saveElasticS(X_split[ix], esp, esindex_name="fitted_hist_index",  estype_name='fitted_hist_type', ishist=True)
             del X_split
             
             del BR
@@ -469,6 +481,74 @@ if __name__ == "__main__":
     if G <= 0:
         logger.DEBUG("G cannot smaller or equal to 0...")
         sys.exit()
+
+    # ~~ Create the index on elastic search ~~
+    es.indices.delete(index='fitted_hist_index')
+    es.indices.delete(index='transform_index')
+
+    logger.info("Checking transform_index availability...")
+    index_name = "transform_index"
+    type_name = "transform_type"
+    is_index_exist = es.indices.exists(index=index_name)
+
+    request_body_tr = {
+        "settings" : {
+            "number_of_shards": 1,
+            "number_of_replicas": 0
+        },
+        "mappings" : {
+            "transform_type" : {
+                "properties" : {
+                    "user_id": { "type": "keyword" },
+                    "topic_id" : { "type": "keyword" },
+                    "topic_is_general": { "type": "boolean"},
+                    "interest_score": { "type": "double" },
+                    "interest_score_created_at": { "type": "date" }
+                }
+            }
+        }
+    }
+
+    request_body_hs = {
+        "settings" : {
+            "number_of_shards": 1,
+            "number_of_replicas": 0
+        },
+        "mappings" : {
+            "fitted_hist_type" : {
+                "properties" : {
+                    "uid_topid": { "type": "keyword" },
+                    "pt_posterior_x_Nt": { "type": "double" },
+                    "smoothed_pt_posterior": { "type": "double" },
+                    "p0_cat_ci": { "type": "double" },
+                    "sigma_Nt": { "type": "double" }
+                }
+            }
+        }
+    }
+
+    # Create the index
+    if not is_index_exist:
+        logger.info("transform_index is Not available.")
+        es.indices.create(index=index_name, body=request_body_tr)
+        logger.info("transform_index Created !!")
+    else:
+        logger.info("transform_index is %s", str(is_index_exist))
+    
+    # ~ creating fitted_hist
+    logger.info("Checking fitted_hist_index availability...")
+    index_name = "fitted_hist_index"
+    type_name = "fitted_hist_type"
+    is_index_exist = es.indices.exists(index=index_name)
+
+    # Create the index
+    if not is_index_exist:
+        logger.info("fitted_hist_index is Not available.")
+        es.indices.create(index=index_name, body=request_body_hs)
+        logger.info("fitted_hist_index Created !!")
+    else:
+        logger.info("fitted_hist_index is %s", str(is_index_exist))
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # ~~~ Generate date range for training set ~~~
     logger.info("Generating date range with N: %d", N)
