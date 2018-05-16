@@ -22,6 +22,7 @@ app.config['DEBUG'] = True
 api = Api(app)
 
 # ~ open config file
+# https://stackoverflow.com/questions/3759981/get-ip-address-of-visitors
 dir_path = os.path.dirname(os.path.realpath(__file__))
 file_path = "/"
 with open(dir_path + file_path + "settings.json", 'r') as f:

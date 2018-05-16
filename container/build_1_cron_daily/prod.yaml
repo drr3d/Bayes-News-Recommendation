@@ -28,7 +28,7 @@ spec:
               requests:
                 memory: 1024Mi
               limits:
-                memory: 2048Mi
+                memory: 4096Mi
             env:
               - name: GOOGLE_APPLICATION_CREDENTIALS
                 value: "/secrets/topic-recommender-staging.json"

@@ -237,6 +237,11 @@ def main(df_input, df_current, df_hist,
         model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
                                                               'date':'interest_score_created_at'})
 
+        # ~~ buat mekanisme fallback general topik ~~
+        #   digunakan untuk handling new un-registered user
+        model_transform_fallback = model_transformsv[model_transformsv['topic_is_general'] == True]
+        # ~~
+
         del model_transform
         logger.info("deleting model_transform...")
         logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
