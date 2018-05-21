@@ -26,20 +26,6 @@ from espandas import Espandas
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-elastic_host = "10.23.255.51"
-elastic_port = 9200
-
-logger.info("ElasticSearch host: %s", elastic_host)
-logger.info("ElasticSearch port: %s", elastic_port)
-"""
-es = Elasticsearch([elastic_host], port=elastic_port,
-                    http_auth=(elastic_username, elastic_password))
-esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
-"""
-es = Elasticsearch([elastic_host], port=elastic_port)
-esp = Espandas(hosts=[elastic_host], port=elastic_port)
-
 pd.set_option('display.width', 1000)
 
 def humanbytes(B):
@@ -105,7 +91,8 @@ def main(df_input, df_current, df_hist,
          current_date, G, project_id,
          savetrain=False, multproc=True,
          threshold=0, start_date=None, end_date=None,
-         saveto="datastore", fitted_models_hist=None):
+         saveto="datastore", fitted_models_hist=None,
+         esp=None):
     """
         Main Process
     """
@@ -153,7 +140,7 @@ def main(df_input, df_current, df_hist,
     # uniques_fit_hist = None
     # begin fit
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=False, use_sigmant=fitby_sigmant,
+                       full_bayes=True, use_sigmant=fitby_sigmant,
                        sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
@@ -169,7 +156,7 @@ def main(df_input, df_current, df_hist,
 
     df_input_X = result[['date', 'user_id', 'topic_id',
                          'num_x', 'num_y', 'is_general']]
-    
+
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
                                                   fitted_model_hist=fitted_models_hist[["pt_posterior_x_Nt",
@@ -188,8 +175,14 @@ def main(df_input, df_current, df_hist,
                                   'is_general']].groupby(['topic_id',
                                                           'is_general']
                                                          ).size().to_frame().reset_index()
-
     model_transform['is_general'] = model_transform['topic_id'].map(map_topic_isgeneral.drop_duplicates('topic_id').set_index('topic_id')['is_general'])
+
+    # ~ handler mapping topic_name
+    map_topic_name = df_dut[['topic_id',
+                             'topic_name']].groupby(['topic_id',
+                                                           'topic_name']
+                                                    ).size().to_frame().reset_index()
+    model_transform['topic_name'] = model_transform['topic_id'].map(map_topic_name.drop_duplicates('topic_id').set_index('topic_id')['topic_name'])
 
     # ~ start by provide rank for each topic type ~
     model_transform['rank'] = model_transform.groupby(['user_id', 'is_general'])['p0_posterior'].rank(ascending=False)
@@ -225,21 +218,34 @@ def main(df_input, df_current, df_hist,
     logger.info("deleting model_fit...")
     del result
     logger.info("deleting result...")
+
+    saveMainModel(savetrain, model_transform, BR, current_date,
+                  saveto, multproc, map_topic_name, fitted_models)
+    return
+
+def saveMainModel(savetrain, model_transform, BR, current_date,
+                  saveto, multproc, map_topic_name, fitted_models):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior']].copy(deep=True)
+        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'topic_name', 'p0_posterior']].copy(deep=True)
         model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
         model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
                                                    format='%Y-%m-%d', errors='coerce')
-              
+
         model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
                                                               'date':'interest_score_created_at'})
 
         # ~~ buat mekanisme fallback general topik ~~
         #   digunakan untuk handling new un-registered user
-        model_transform_fallback = model_transformsv[model_transformsv['topic_is_general'] == True]
+        model_transform_fallback = model_transform[['user_id', 'topic_id', 'is_general',
+                                                    'topic_name',
+                                                    'p0_posterior']].loc[model_transform['is_general'] == True].copy(deep=True)
+        df_mtf = model_transform_fallback.groupby(['topic_id'])['p0_posterior'].agg('sum').reset_index()
+        df_mtf = df_mtf.rename(columns={'p0_posterior': 'interest_score'})
+        df_mtf['topic_name'] = df_mtf['topic_id'].map(map_topic_name.drop_duplicates('topic_id').set_index('topic_id')['topic_name'])
+        df_mtf = df_mtf[['topic_id', 'topic_name', 'interest_score']]
         # ~~
 
         del model_transform
@@ -284,28 +290,42 @@ def main(df_input, df_current, df_hist,
             logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp, ishist=False)
-            del X_split
-            
+                mh.saveElasticS(X_split[ix], esp, save_type="current")
+            del X_split       
 
             logger.info("Saving fitted_models as history to Elasticsearch...")
             save_sigma_nt = BR.sum_all_nt.copy(deep=True)
             fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
 
             fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
-            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
-  
+            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt",
+                                                           "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
+
             X_split = np.array_split(fitted_models_sigmant, 35)
             logger.info("Saving total data: %d", len(fitted_models_sigmant))
             logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
             for ix in range(len(X_split)):
                 logger.info("processing batch-%d", ix)
                 mh.saveElasticS(X_split[ix], esp,
-                                esindex_name="fitted_hist_index",
-                                estype_name='fitted_hist_type',
-                                ishist=True)
+                                esindex_name="topicrecommendation_fitted_hist_index",
+                                estype_name='topicrecommendation_fitted_hist_type',
+                                save_type="history")
             del X_split
-            
+            logger.info("deleting X_split...")
+
+            # ~ saving fallback dataset ~
+            logger.info("saving fallback dataset")
+            logger.info(df_mtf)
+            mh.saveElasticS(df_mtf.sort_values('interest_score', ascending=False),
+                            esp, esindex_name="topicrecommendation_transform_fallback_index",
+                            estype_name='topicrecommendation_transform_fallback_type',
+                            save_type="fallback")
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+            del model_transformsv
+            logger.info("deleting model_transformsv...")
+            del df_mtf
+            logger.info("deleting df_mtf...")
             del BR
             logger.info("deleting BR...")
             del save_sigma_nt
@@ -379,18 +399,18 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                     logger.info("Appending training data...")
                     datalist.append(tframe)
                 elif loadfrom.strip().lower() == 'elastic':
-                    X_split = np.array_split(tframe, 75)
+                    X_split = np.array_split(tframe, 100)
                     logger.info("loading history data from elastic...")
                     logger.info("Len of X_split for batch load: %d", len(X_split))
                     logger.info("Appending history data...")
-                    
+
                     for ix in range(len(X_split)):
                         lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
                         logger.info("call %d history data...", len(lhistory))
                         inside_data = mh.loadESHistory(lhistory, es,
-                                                       esindex_name='fitted_hist_index',
-                                                       estype_name='fitted_hist_type')
-                         
+                                                       esindex_name='topicrecommendation_fitted_hist_index',
+                                                       estype_name='topicrecommendation_fitted_hist_type')
+
                         if inside_data is not None:
                             # split back the user_id and topic_id
                             inside_data[['user_id','topic_id']] = inside_data.uid_topid.str.split('_', expand=True)
@@ -400,7 +420,7 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                             del inside_data
                         else:
                             logger.info("inside_data is None...")
-                    
+
                     logger.info("Appending training data...")
                     datalist.append(tframe)
                 else:
@@ -498,6 +518,11 @@ if __name__ == "__main__":
     # ~ made N fix ~
     N = 1
 
+    # default value for elastic host and port,
+    #  otherwise, overwrite on settings.json
+    elastic_host = "10.23.255.51"
+    elastic_port = 9200
+
     if args.ids:
         if not args.isn:
             # file setting should be in json format
@@ -518,22 +543,30 @@ if __name__ == "__main__":
                     """ + fit_table['uid_columnname'] + """ as user_id,
                     """ + fit_table['topid_columnname'] + """ as topic_id,
                     """ + fit_table['isgeneral_columnname'] + """ as is_general,
-                    """ + fit_table['topiccount_columnname'] + """ as num
-                    FROM `""" + fit_table['db_table_name'] + """`
+                    """ + fit_table['topiccount_columnname'] + """ as num,
+                    click_topic_name as topic_name
+                    FROM `""" + fit_table['db_table_name'] + """`,
                     """
 
                 query_transform = """SELECT
                     """ + transform_table['uid_columnname'] + """ as user_id,
                     """ + transform_table['topid_columnname'] + """ as topic_id,
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
-                    """ + transform_table['topiccount_columnname'] + """ as num
+                    """ + transform_table['topiccount_columnname'] + """ as num,
+                    click_topic_name as topic_name
                     FROM `""" + transform_table['db_table_name'] + """` CDH
                     """
 
-        project_id = config["project_id"]
-        
-        G = config["G"]
-        T = config["threshold"]
+                project_id = config["project_id"]
+
+                G = config["G"]
+                T = config["threshold"]
+
+                # elastic settings
+                logger.info("overwrites ES main settings using settings.json !!")
+                es_settings = config["elastic_settings"]
+                elastic_host = es_settings['host']
+                elastic_port = es_settings['port']
     else:
         project_id = args.p  # assign bigquery project id
         G = args.G
@@ -542,7 +575,8 @@ if __name__ == "__main__":
                             click_user_alias_id as user_id,
                             click_topic_id as topic_id,
                             click_topic_is_general as is_general,
-                            click_topic_count as num
+                            click_topic_count as num,
+                            click_topic_name as topic_name
                         FROM `kumparan-data.topic_recommender.click_distribution_daily`
                     """
 
@@ -550,13 +584,50 @@ if __name__ == "__main__":
                             SELECT click_user_alias_id as user_id,
                               click_topic_id as topic_id,
                               click_topic_is_general as is_general,
-                              click_topic_count as num
+                              click_topic_count as num,
+                              click_topic_name as topic_name
                             FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
                           """
 
     if G <= 0:
         logger.DEBUG("G cannot smaller or equal to 0...")
         sys.exit()
+
+    # ~~~ create elastic index for fallback data ~~~
+    logger.info("ElasticSearch host: %s", elastic_host)
+    logger.info("ElasticSearch port: %s", elastic_port)
+
+    es = Elasticsearch([elastic_host], port=elastic_port)
+    esp = Espandas(hosts=[elastic_host], port=elastic_port)
+
+    logger.info("Checking topicrecommendation_transform_fallback_index availability...")
+    index_name = "topicrecommendation_transform_fallback_index"
+    is_index_exist = es.indices.exists(index=index_name)
+
+    request_body_fb = {
+        "settings" : {
+            "number_of_shards": 2,
+            "number_of_replicas": 1
+        },
+        "mappings" : {
+            "topicrecommendation_transform_fallback_type" : {
+                "properties" : {
+                    "topid": {"type": "keyword" },
+                    "topic_name": {"type": "text" },
+                    "interest_score": {"type": "double" }
+                }
+            }
+        }
+    }
+
+    # Create the index
+    if not is_index_exist:
+        logger.info("topicrecommendation_transform_fallback_index is Not available !!")
+        es.indices.create(index=index_name, body=request_body_fb)
+        logger.info("topicrecommendation_transform_fallback_index Created.")
+    else:
+        logger.info("topicrecommendation_transform_fallback_index existance is %s", str(is_index_exist))
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # ~~~ Generate date range for training set ~~~
     logger.info("Generating date range with N: %d", N)
@@ -589,7 +660,7 @@ if __name__ == "__main__":
             G, project_id, savetrain=args.savetrain,
             multproc=args.savemp, threshold=T,
             start_date=None, end_date=None, saveto=args.storage,
-            fitted_models_hist=big_frame_hist)
-        logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+            fitted_models_hist=big_frame_hist, esp=esp)
+        logger.info("~~~~~~~~~~~~~~ All Daily Train operation is complete ~~~~~~~~~~~~~~~~~")
     else:
         logger.info("Train return False, please cek your data availability")

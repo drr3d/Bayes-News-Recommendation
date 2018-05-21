@@ -1,7 +1,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: topic-reco-trainer-stag
+  name: topic-reco-trainer2-stag
   namespace: staging
   labels:
     project: topic-recommender-v1
@@ -28,7 +28,7 @@ spec:
               requests:
                 memory: 8192Mi
               limits:
-                memory: 8192Mi
+                memory: 16384Mi
             env:
               - name: GOOGLE_APPLICATION_CREDENTIALS
                 value: "/secrets/topic-recommender-staging.json"

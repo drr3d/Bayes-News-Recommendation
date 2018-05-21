@@ -245,8 +245,8 @@ class GBayesTopicRecommender(object):
         cur_result2 = pd.merge(df2, cursum_all_click, on=['date'])
         cur_result2 = cur_result2.rename(columns={'num': 'date_all_click'})
         cur_result2['p0_cat_ci'] = pd.eval('cur_result2.num_y / cur_result2.date_all_click')
-        cur_result2 = cur_result2.groupby(['topic_id', 'p0_cat_ci']).size().to_frame().reset_index()
-        cur_result2 = cur_result2[['topic_id', 'p0_cat_ci']]
+        cur_result2 = cur_result2.groupby(['topic_id', 'p0_cat_ci', 'num_y']).size().to_frame().reset_index()
+        cur_result2 = cur_result2[['topic_id', 'p0_cat_ci', 'num_y']]
 
         # ~~~~
         # ada kemungkinan kita cukup save fitted_models saja untuk perhitungan perharinya,
@@ -291,6 +291,9 @@ class GBayesTopicRecommender(object):
         fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
                                                                             cur_result2.p0_cat_ci)),
                                                                             na_action=0.)
+        fitted_models['num_y'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
+                                                                            cur_result2.num_y)),
+                                                                   na_action=0.)
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):

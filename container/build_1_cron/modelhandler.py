@@ -182,7 +182,8 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
 
-def saveElasticS(df, esp_client, esindex_name='transform_index', estype_name='transform_type', ishist=False):
+def saveElasticS(df, esp_client, esindex_name='topicrecommendation_transform_index',
+                 estype_name='topicrecommendation_transform_type', ishist=False):
     start_total_time = time.time()
 
     INDEX = esindex_name

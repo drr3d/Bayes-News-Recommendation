@@ -155,8 +155,197 @@ c = [{
             "topic_id": "600986675"
         }].__iter__()
 
+d = [
+        {
+            "topic_name": "Marketing",
+            "interest_score": 0.0000154796,
+            "rank": 1,
+            "topic_id": "24494375"
+        },
+        {
+            "topic_name": "Modifikasi",
+            "interest_score": 0.000041949,
+            "rank": 1,
+            "topic_id": "1035897075"
+        },
+        {
+            "topic_name": "Singapura",
+            "interest_score": 0.0000463568,
+            "rank": 1,
+            "topic_id": "46175391"
+        },
+        {
+            "topic_name": "Penipuan",
+            "interest_score": 0.0001664813,
+            "rank": 1,
+            "topic_id": "347858007"
+        },
+        {
+            "topic_name": "Perbankan",
+            "interest_score": 0.0004181841,
+            "rank": 1,
+            "topic_id": "33160611"
+        },
+        {
+            "topic_name": "Hollywood",
+            "interest_score": 0.0004338053,
+            "rank": 1,
+            "topic_id": "47094765"
+        },
+        {
+            "topic_name": "Internet",
+            "interest_score": 0.0004971035,
+            "rank": 1,
+            "topic_id": "82233981"
+        },
+        {
+            "topic_name": "Infrastruktur",
+            "interest_score": 0.0006843708000000001,
+            "rank": 1,
+            "topic_id": "38682224"
+        },
+        {
+            "topic_name": "Smartphone",
+            "interest_score": 0.000692263,
+            "rank": 1,
+            "topic_id": "41661376"
+        },
+        {
+            "topic_name": "Survei",
+            "interest_score": 0.0016380414000000002,
+            "rank": 1,
+            "topic_id": "46859735"
+        },
+        {
+            "topic_name": "Horor",
+            "interest_score": 0.0073969624,
+            "rank": 1,
+            "topic_id": "338820867"
+        },
+        {
+            "topic_name": "Parenting",
+            "interest_score": 0.009060816400000001,
+            "rank": 1,
+            "topic_id": "40710353"
+        },
+        {
+            "topic_name": "Kuliner",
+            "interest_score": 0.0101298267,
+            "rank": 1,
+            "topic_id": "22661216"
+        },
+        {
+            "topic_name": "Keluarga",
+            "interest_score": 0.022234603000000002,
+            "rank": 1,
+            "topic_id": "27312625"
+        },
+        {
+            "topic_name": "Otomotif",
+            "interest_score": 0.030306936200000002,
+            "rank": 1,
+            "topic_id": "22552435"
+        },
+        {
+            "topic_name": "Media Sosial",
+            "interest_score": 0.0867776779,
+            "rank": 1,
+            "topic_id": "27313197"
+        },
+        {
+            "topic_name": "Sains",
+            "interest_score": 0.1698616142,
+            "rank": 1,
+            "topic_id": "27433171"
+        },
+        {
+            "topic_name": "Sejarah",
+            "interest_score": 0.17942875260000002,
+            "rank": 1,
+            "topic_id": "27428824"
+        },
+        {
+            "topic_name": "Regional",
+            "interest_score": 0.3892814956,
+            "rank": 1,
+            "topic_id": "33020303"
+        },
+        {
+            "topic_name": "Sepak Bola",
+            "interest_score": 0.39614503030000003,
+            "rank": 1,
+            "topic_id": "27432949"
+        },
+        {
+            "topic_name": "Pembunuhan",
+            "interest_score": 0.4050528284,
+            "rank": 1,
+            "topic_id": "39328335"
+        },
+        {
+            "topic_name": "Sports",
+            "interest_score": 0.4601020186,
+            "rank": 1,
+            "topic_id": "40723504"
+        },
+        {
+            "topic_name": "Bisnis",
+            "interest_score": 0.5393272529,
+            "rank": 1,
+            "topic_id": "22552186"
+        },
+        {
+            "topic_name": "Liputan Khusus",
+            "interest_score": 1.3833275839999999,
+            "rank": 1,
+            "topic_id": "1065124711"
+        },
+        {
+            "topic_name": "Nasional",
+            "interest_score": 1.5661961556000001,
+            "rank": 1,
+            "topic_id": "22552349"
+        },
+        {
+            "topic_name": "News",
+            "interest_score": 375.8533696987,
+            "rank": 1,
+            "topic_id": "22553543"
+        },
+        {
+            "topic_name": "Tips Percintaan",
+            "interest_score": 1.558e-7,
+            "rank": 1,
+            "topic_id": "27431110790312447"
+        },
+        {
+            "topic_name": "Film",
+            "interest_score": 0.0000130029,
+            "rank": 1,
+            "topic_id": "24575829"
+        },
+        {
+            "topic_name": "Ibu Menyusui",
+            "interest_score": 0.000010771200000000001,
+            "rank": 1,
+            "topic_id": "774386537"
+        },
+        {
+            "topic_name": "Narkotika",
+            "interest_score": 0.0000104756,
+            "rank": 1,
+            "topic_id": "43159641"
+        }
+    ]
+
 import time
 start_total_time = time.time()
 n = list(c)
 end_total_time = time.time() - start_total_time
 print 'Time taken to transform output: %.7f' % end_total_time
+
+import pandas as pd
+df = pd.DataFrame(d)
+df_mod = df[['topic_id', 'topic_name', 'interest_score']]
+df_mod['rank'] = df_mod['interest_score'].rank(ascending=False)
+print df_mod

@@ -14,7 +14,7 @@ spec:
       service: topicreco_api_service
   template:
     metadata:
-      name: topic-reco-api
+      name: topic-reco-api-prod
       namespace: production
       labels:
         project: topic-recommender-v1

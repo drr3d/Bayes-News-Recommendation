@@ -17,5 +17,9 @@
         "topid_columnname":"click_topic_id",
         "isgeneral_columnname":"click_topic_is_general",
         "topiccount_columnname":"click_topic_count"
+    },
+    "elastic_settings":{
+        "host":"10.23.255.51",
+        "port":9200
     }
 }

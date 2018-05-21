@@ -13,6 +13,7 @@ import time
 import multiprocessing as mp
 from multiprocessing import Process
 import pandas as pd
+import six
 
 from google.cloud import datastore
 from google.cloud.datastore.entity import Entity
@@ -77,7 +78,8 @@ def loadDSHistory(key_list, kinds='topic_recomendation_history'):
     return output_multprocessA
 
 
-def loadESHistory(uid_topid, es_client, esindex_name='transform_index', estype_name='transform_type'):
+def loadESHistory(uid_topid, es_client, esindex_name='topicrecommendation_transform_index',
+                  estype_name='topicrecommendation_transform_type'):
     logger.info("len of uid_topid in loadESHistory: %d", len(uid_topid))
 
     col_source = ["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]
@@ -165,15 +167,23 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
     logger.info('end of all insert batch entity to datastore with exec time : %.5f and total entity : %d' % (end_total_time, len(df)))
 
 
-def saveElasticS(df, esp_client, esindex_name='transform_index', estype_name='transform_type', ishist=False):
+def saveElasticS(df, esp_client, esindex_name='topicrecommendation_transform_index',
+                 estype_name='topicrecommendation_transform_type', save_type="history"):
     start_total_time = time.time()
 
     INDEX = esindex_name
     TYPE = estype_name
-    if ishist:
+
+    if not isinstance(save_type, six.string_types):
+        logger.info("save_type datatype must be string!!")
+        return
+    
+    if save_type.strip().lower() == 'history':
         df['indexId'] = df['uid_topid'].map(str)
-    else:
+    elif save_type.strip().lower() == 'current':
         df['indexId'] = df["user_id"].map(str) + "_" + df["topic_id"].map(str)
+    elif save_type.strip().lower() == 'fallback':
+        df['indexId'] = df['topic_id'].map(str)
 
     logger.info("Bulk insert into ElasticSearch, chunksize=%d, time_out: %d" % (20000, 60))
     logger.info(esp_client.es_write(df, INDEX, TYPE, chunksize=20000, rto=60))

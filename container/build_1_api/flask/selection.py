@@ -68,7 +68,7 @@ class Selections(Resource):
         elif storage.strip().lower() == "elastic":
             logger.info("Begin querying elastic...")
             esclient = self.es_client
-            col_source = ["user_id", "topic_id", "topic_is_general", "interest_score"]
+            col_source = ["user_id", "topic_id", "topic_is_general", "topic_name", "interest_score"]
             doc = {
                     "query": {
                         "match": {
@@ -79,13 +79,38 @@ class Selections(Resource):
                 }
 
             params = {"size":  30}
-            res = esclient.search(index='transform_index', doc_type='transform_type', body=doc, params=params)
+            res = esclient.search(index='topicrecommendation_transform_index',
+                                  doc_type='topicrecommendation_transform_type',
+                                  body=doc, params=params)
 
             hits = res['hits']['hits']
             data = [hit["_source"] for hit in hits]
             A = pd.DataFrame(data, columns=col_source)
-            A['rank'] = A.groupby(['user_id', 'topic_is_general'])['interest_score'].rank(ascending=False)
-            A = A.sort_values(['topic_is_general', 'rank'], ascending=[False, True])
+            if len(A.index) > 0:
+                A['rank'] = A.groupby(['user_id', 'topic_is_general'])['interest_score'].rank(ascending=False)
+                A = A.sort_values(['topic_is_general', 'rank'], ascending=[False, True])
+            else:
+                # ~~ here for handling new_user ~~
+                col_source = ["topic_id", "topic_name", "interest_score"]
+                # select all
+                doc = {
+                        "query" : {
+                                    "match_all" : {}
+                                   },
+                        '_source' : col_source
+                       }
+                params = {"size":  30}
+                res = esclient.search(index='topicrecommendation_transform_fallback_index',
+                                    doc_type='topicrecommendation_transform_fallback_type',
+                                    body=doc, params=params)
+
+                hits = res['hits']['hits']
+                data = [hit["_source"] for hit in hits]
+                logger.info(data)
+                A = pd.DataFrame(data, columns=col_source)
+                logger.info(A)
+                A['rank'] = A['interest_score'].rank(ascending=False)
+                A = A.sort_values(['rank'], ascending=[True])
         
         end_all_time = time.time() - start_all_time
         print 'Time taken to transform output: %.7f' % end_all_time

@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 import ujson as json
 import logging
+import sys
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.exceptions import NotFoundError
@@ -134,4 +135,9 @@ class Espandas(object):
         
         del df
         logger.info("final espandas, using %.3f percent memory...", psutil.virtual_memory().percent)
-        helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+
+        try:
+            helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            pass
