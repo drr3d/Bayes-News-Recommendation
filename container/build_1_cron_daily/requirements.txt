@@ -1,4 +1,4 @@
-google-cloud
+google-cloud==0.32
 google-cloud-bigquery==0.29.0
 pandas==0.21.0
 numpy==1.13.3

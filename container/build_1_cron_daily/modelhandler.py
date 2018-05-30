@@ -169,6 +169,9 @@ def saveDataStorePutMulti(df, kinds='topic_recomendation'):
 
 def saveElasticS(df, esp_client, esindex_name='topicrecommendation_transform_index',
                  estype_name='topicrecommendation_transform_type', save_type="history"):
+    """
+        Saving data to elastic search
+    """
     start_total_time = time.time()
 
     INDEX = esindex_name

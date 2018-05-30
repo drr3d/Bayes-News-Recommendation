@@ -7,7 +7,7 @@ metadata:
     project: topic-recommender-v1
     service: data_trainer
 spec:
-  schedule: "*/50 * * * *"
+  schedule: "*/30 * * * *"
   jobTemplate:
     spec:
       template:

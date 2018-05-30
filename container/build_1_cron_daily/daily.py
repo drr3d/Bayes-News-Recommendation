@@ -21,46 +21,21 @@ from elasticsearch import helpers as EShelpers
 from datetime import timedelta
 
 import modelhandler as mh  # comment if you have another method for saving models
+import transporthandler as th
 from espandas import Espandas
+from utility import *
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 pd.set_option('display.width', 1000)
 
-def humanbytes(B):
-    'Return the given bytes as a human friendly KB, MB, GB, or TB string'
-    B = float(int(B))
-    KB = float(1024)
-    MB = float(KB ** 2) # 1,048,576
-    GB = float(KB ** 3) # 1,073,741,824
-    TB = float(KB ** 4) # 1,099,511,627,776
-    if B < KB:
-        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
-    elif KB <= B < MB:
-        return '{0:.2f} KB'.format(B/KB)
-    elif MB <= B < GB:
-        return '{0:.2f} MB'.format(B/MB)
-    elif GB <= B < TB:
-        return '{0:.2f} GB'.format(B/GB)
-    elif TB <= B:
-        return '{0:.2f} TB'.format(B/TB)
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
 
 def loadBQ(client, query, job_config, tabletype="history"):
     # https://github.com/ofek/pypinfo/issues/27
     job_config.use_legacy_sql = False
     job_config.allowLargeResults = True
-
+    logger.info("query on loadBQ: %s", query)
     result = client.query(query, job_config=job_config)
     rows = result.result()
 
@@ -76,16 +51,6 @@ def loadBQ(client, query, job_config, tabletype="history"):
     del result
 
     return df
-
-def dateValidate(date_text):
-    """
-        to validate date input format
-    """
-    try:
-        datetime.datetime.strptime(date_text, '%Y-%m-%d')
-        return True
-    except ValueError:
-        raise ValueError("Incorrect data format, should be YYYY-MM-DD")
 
 def main(df_input, df_current, df_hist,
          current_date, G, project_id,
@@ -219,121 +184,14 @@ def main(df_input, df_current, df_hist,
     del result
     logger.info("deleting result...")
 
-    saveMainModel(savetrain, model_transform, BR, current_date,
-                  saveto, multproc, map_topic_name, fitted_models)
-    return
-
-def saveMainModel(savetrain, model_transform, BR, current_date,
-                  saveto, multproc, map_topic_name, fitted_models):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'topic_name', 'p0_posterior']].copy(deep=True)
-        model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
-        model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
-                                                   format='%Y-%m-%d', errors='coerce')
-
-        model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
-                                                              'date':'interest_score_created_at'})
-
-        # ~~ buat mekanisme fallback general topik ~~
-        #   digunakan untuk handling new un-registered user
-        model_transform_fallback = model_transform[['user_id', 'topic_id', 'is_general',
-                                                    'topic_name',
-                                                    'p0_posterior']].loc[model_transform['is_general'] == True].copy(deep=True)
-        df_mtf = model_transform_fallback.groupby(['topic_id'])['p0_posterior'].agg('sum').reset_index()
-        df_mtf = df_mtf.rename(columns={'p0_posterior': 'interest_score'})
-        df_mtf['topic_name'] = df_mtf['topic_id'].map(map_topic_name.drop_duplicates('topic_id').set_index('topic_id')['topic_name'])
-        df_mtf = df_mtf[['topic_id', 'topic_name', 'interest_score']]
-        # ~~
-
-        del model_transform
-        logger.info("deleting model_transform...")
-        logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
-
-        logger.info("Begin saving trained data...")
-        # ~ Place your code to save the training model here ~
-        if str(saveto).lower() == "datastore":
-            logger.info("Using google datastore as storage...")
-            if multproc:
-                # ~ save transform models ~
-                logger.info("Saving main Transform model to Google DataStore...")
-                logger.info("Saving total data: %d", len(model_transformsv))
-                mh.saveDataStorePutMulti(model_transformsv)
-
-                # ~ save fitted models ~
-                logger.info("Saving fitted_models as history to Google DataStore...")
-                save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-                fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
-                logger.info("Saving total data: %d", len(fitted_models_sigmant))
-                X_split = np.array_split(fitted_models_sigmant, 10)
-                logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
-                for ix in range(len(X_split)):
-                    logger.info("processing batch-%d", ix)
-                    mh.saveDataStorePutMulti(X_split[ix], kinds='topic_recomendation_history')
-
-                del X_split
-                logger.info("deleting X_split...")
-                del save_sigma_nt
-                logger.info("deleting save_sigma_nt...")
-
-                del BR
-                logger.info("deleting BR...")
-
-        elif str(saveto).lower() == "elastic":
-            logger.info("Using ElasticSearch as storage...")
-            logging.info("Saving main Transform model to Elasticsearch...")
-
-            X_split = np.array_split(model_transformsv, 15)
-            logger.info("Saving total data: %d", len(model_transformsv))
-            logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
-            for ix in range(len(X_split)):
-                logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp, save_type="current")
-            del X_split       
-
-            logger.info("Saving fitted_models as history to Elasticsearch...")
-            save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-            fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
-
-            fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
-            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt",
-                                                           "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
-
-            X_split = np.array_split(fitted_models_sigmant, 35)
-            logger.info("Saving total data: %d", len(fitted_models_sigmant))
-            logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
-            for ix in range(len(X_split)):
-                logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp,
-                                esindex_name="topicrecommendation_fitted_hist_index",
-                                estype_name='topicrecommendation_fitted_hist_type',
-                                save_type="history")
-            del X_split
-            logger.info("deleting X_split...")
-
-            # ~ saving fallback dataset ~
-            logger.info("saving fallback dataset")
-            logger.info(df_mtf)
-            mh.saveElasticS(df_mtf.sort_values('interest_score', ascending=False),
-                            esp, esindex_name="topicrecommendation_transform_fallback_index",
-                            estype_name='topicrecommendation_transform_fallback_type',
-                            save_type="fallback")
-            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-            del model_transformsv
-            logger.info("deleting model_transformsv...")
-            del df_mtf
-            logger.info("deleting df_mtf...")
-            del BR
-            logger.info("deleting BR...")
-            del save_sigma_nt
-            logger.info("deleting save_sigma_nt...")
-            del fitted_models_sigmant
-            logger.info("deleting fitted_models_sigmant...")
-
+    th.saveMainModel(savetrain, model_transform, BR, current_date,
+                     saveto, multproc, map_topic_name,
+                     fitted_models, esp)
     return
+
 
 def getBig(procdate, query_fit):
     bq_client = bigquery.Client()
@@ -545,7 +403,7 @@ if __name__ == "__main__":
                     """ + fit_table['isgeneral_columnname'] + """ as is_general,
                     """ + fit_table['topiccount_columnname'] + """ as num,
                     click_topic_name as topic_name
-                    FROM `""" + fit_table['db_table_name'] + """`,
+                    FROM `""" + fit_table['db_table_name'] + """`
                     """
 
                 query_transform = """SELECT
