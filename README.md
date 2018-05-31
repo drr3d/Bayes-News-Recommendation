@@ -18,18 +18,27 @@ Docker container dan kubernetes yang digunakan sebagai deployment environtment u
 
 ### CRON
 digunakan sebagai data trainer, terdiri dari 2:
-- daily_cron
-- legacy_cron
+- **legacy_cron** : digunakan sekali saja ketika insiasi **model**.
+- **daily_cron** : setelah model awal diinisiasi dengan *legacy_train*, selanjutnya model akan diupdate secara **online** per-jam(atau bisa diatur sesuai kebutuhan)
 
 ### google-bigquery
 berisi file-file sql-query yang digunakan pada proses awal, query tersebut digunakan untuk membuat 2 table data feeder utama yaitu:
 1. topic_recommender.click_distribution_hourly
 
-        table ini berisikan data hourly
+    table ini berisikan data hourly
 
 2. topic_recommender.click_distribution_daily
 
     table ini berisikan data daily
 
 ### src
-Berisi file class utama perhitungan
+terdiri dari:
+1. espandas
+
+    folder ini berisikan modfied version dari repo utamanya yaitu:
+
+        [espandas](https://github.com/dashaub/espandas)
+
+2. googlenews
+
+    Berisi file class utama perhitungan **Bayesian Framework**
