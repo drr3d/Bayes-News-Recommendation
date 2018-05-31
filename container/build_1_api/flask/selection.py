@@ -38,13 +38,13 @@ class Selections(Resource):
         return query.fetch()
 
     def post(self):
+        start_all_time = time.time()
         args = self.reqparse.parse_args()
 
         uid = str(args['uid']).strip()
         orient = str(args['orient']).strip()
         storage = str(args['storage']).strip()
 
-        start_all_time = time.time()
         if storage.strip().lower() == "datastore":
             logger.info("Begin querying datastore...")
             start_total_time = time.time()
@@ -123,6 +123,10 @@ class Selections(Resource):
         elif orient == 'records':
             results = A.to_dict('records')
 
-        response = {'status': 'ok', 'result': results}
+        response = {'status': 200,
+                    'data': results,
+                    'limit_per_page': 0,
+                    'page': 1,
+                    'took_ms': end_all_time}
         return Response(json.dumps(response), status=200, mimetype='application/json')
     
