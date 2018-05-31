@@ -24,8 +24,11 @@ digunakan sebagai data trainer, terdiri dari 2:
 ### google-bigquery
 berisi file-file sql-query yang digunakan pada proses awal, query tersebut digunakan untuk membuat 2 table data feeder utama yaitu:
 1. topic_recommender.click_distribution_hourly
+
         table ini berisikan data hourly
+
 2. topic_recommender.click_distribution_daily
+
     table ini berisikan data daily
 
 ### src
