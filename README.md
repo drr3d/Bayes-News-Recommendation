@@ -14,7 +14,7 @@ Penjelasan folder:
 digunakan untuk REST API, dibuat menggunakan Python Flask
 
 ### container
-Docker container dan kubernetes yang digunakan sebagai deployment environtment utama.
+berisikan *Docker container* dan *Kubernetes pod* yang digunakan sebagai deployment environtment utama.
 
 ### CRON
 digunakan sebagai data trainer, terdiri dari 2:
@@ -25,11 +25,11 @@ digunakan sebagai data trainer, terdiri dari 2:
 berisi file-file sql-query yang digunakan pada proses awal, query tersebut digunakan untuk membuat 2 table data feeder utama yaitu:
 1. topic_recommender.click_distribution_hourly
 
-    table ini berisikan data hourly
+    table ini berisikan data hourly. data hourly adalah data current interest pada current date.
 
 2. topic_recommender.click_distribution_daily
 
-    table ini berisikan data daily
+    table ini berisikan data daily. data daily adalah interest history.
 
 ### src
 terdiri dari:
@@ -37,7 +37,7 @@ terdiri dari:
 
     folder ini berisikan modfied version dari repo utamanya yaitu:
 
-        [espandas](https://github.com/dashaub/espandas)
+    * [espandas](https://github.com/dashaub/espandas)
 
 2. googlenews
 
