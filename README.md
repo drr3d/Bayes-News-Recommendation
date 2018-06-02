@@ -10,14 +10,14 @@ System ini merupakan re-implementasi dari jurnal aslinya yaitu:
 # Getting started:
 Penjelasan folder:
 
-### API
+### rest-api:
 digunakan untuk REST API, dibuat menggunakan Python Flask
 
 ### container
 berisikan *Docker container* dan *Kubernetes pod* yang digunakan sebagai deployment environtment utama.
 
-### CRON
-digunakan sebagai data trainer, terdiri dari 2:
+### model-trainer
+digunakan sebagai data trainer untuk menghasilkan model, terdiri dari 2:
 - **legacy_cron** : digunakan sekali saja ketika insiasi **model**.
 - **daily_cron** : setelah model awal diinisiasi dengan *legacy_train*, selanjutnya model akan diupdate secara **online** per-jam(atau bisa diatur sesuai kebutuhan)
 

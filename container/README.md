@@ -1,7 +1,14 @@
-# for docker and kubernetes related settings
+# container
+for docker and kubernetes related settings
 
-deploy step:
----
+### Penjelasan folder:
+1. **build_1_api**: container dan pod untuk rest api
+2. **build_1_cron_legacy**: berisi python module untuk master model data trainer(25 hari)
+3. **build_1_cron_daily**: berisi python module untuk online model trainer (per-1 jam, dengan mengambil per-8 jam back time windows)
+
+# deploy step:
+
+### google clound setup
 * Run the following command to authenticate to the cluster:
 
 ```
@@ -24,6 +31,7 @@ switch project:
     gcloud config set project kumparan-data
 ```
 
+### Docker
 * build docker:
 
 ```
@@ -35,6 +43,7 @@ jangan lupa tanda titik di paling akhir dari command
     - gcloud container builds submit --tag gcr.io/kumparan-data/reco-cron-staging:v0.1.X .
 ```
 
+### Kubernates 
 * build secret:
 ```
     - kubectl create secret generic your-secret-name --from-file=./topic-recommender-staging.json
@@ -54,23 +63,20 @@ jangan lupa tanda titik di paling akhir dari command
         - kubectl describe secrets/topicreco-legacytrainer-service-account
 ```
 
+### another tutorial
 * jika sudah aman, ikuti
 
 [gitlab-kumparan](https://gitlab.kumparan.com/data/k8s-tutorial/blob/master/README.md "gitlab-kumparan")
 
 [quip-kumparan](https://kumparan.quip.com/yI4tAJ3VyoaO "quip-kumparan")
 
-
 * cek monitor di
 
 [gcloud-console](https://console.cloud.google.com/kubernetes/workload "gcloud-console")
 
-___
-
-build_1
----
-
+# Note
 run docker:
+
 ```
 docker run -i --rm -v "${PWD}/topic-recommender-staging.json" --env APPLICATION_DEFAULT_CREDENTIALS="4/AAC7JtcB0DRUcq3QHsG34PezjgFRjgJPzYu7q5ywLlFZTH8PfUPzuWo" GOOGLE_APPLICATION_CREDENTIALS="/topic-recommender-staging.json" reco-cron:v0.1.X
 
@@ -84,10 +90,8 @@ cek if internet exist on docker:
 docker run -ti recocron:v0.1.X ping google.com
 ```
 
-___
+kubernates:
 
-kubernates
----
 * untuk staging sepertinya lebih baik:
 ```
 restartPolicy: OnFailure -> dirubah ke Never
@@ -95,6 +99,5 @@ restartPolicy: OnFailure -> dirubah ke Never
 ini mempermudah mencari bug
 ```
 
-some usefull link:
----
-https://stackoverflow.com/questions/45697327/load-large-data-from-bigquery-to-python
+# some usefull link:
+* [stackoverflow-1](https://stackoverflow.com/questions/45697327/load-large-data-from-bigquery-to-python)

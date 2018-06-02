@@ -13,6 +13,17 @@ from flask_restful import reqparse, Resource
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def str2bool(v):
+    """
+        validate boolean on argparse
+    """
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise ValueError('Boolean value expected.')
+
 
 class Selections(Resource):
     def __init__(self, client, kind, es_client):
@@ -28,6 +39,8 @@ class Selections(Resource):
         self.reqparse.add_argument('storage', choices=['datastore', 'elastic'], required=True,
                                    location='json', default="datastore",
                                    help='storage use to fetch the data, should be one of [datastore, elastic]')
+        self.reqparse.add_argument('verbose', type=str2bool, required=True, location='json', default="false",
+                                   help='show full output our not.')
 
         super(Selections, self).__init__()
 
@@ -44,6 +57,7 @@ class Selections(Resource):
         uid = str(args['uid']).strip()
         orient = str(args['orient']).strip()
         storage = str(args['storage']).strip()
+        verbose = args['verbose']
 
         if storage.strip().lower() == "datastore":
             logger.info("Begin querying datastore...")
@@ -123,10 +137,19 @@ class Selections(Resource):
         elif orient == 'records':
             results = A.to_dict('records')
 
-        response = {'status': 200,
-                    'data': results,
-                    'limit_per_page': 0,
-                    'page': 1,
-                    'took_ms': end_all_time}
+        if verbose:
+            response = {'status': 200,
+                        'data': {
+                                    'topics':results,
+                                    'limit_per_page': 0,
+                                    'page': 1,
+                                    'took_ms': end_all_time
+                                },
+                        'error': "null"}
+        else:
+            response = {'status': 200,
+                        'data': {
+                                    'topics':results
+                                }}
         return Response(json.dumps(response), status=200, mimetype='application/json')
     
