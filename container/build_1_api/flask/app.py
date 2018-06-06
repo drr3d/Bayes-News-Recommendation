@@ -9,9 +9,9 @@ from google.cloud import datastore
 from flask import Flask, Response
 from flask_restful import Api
 from elasticsearch import Elasticsearch
-from elasticsearch import helpers as EShelpers
+# from elasticsearch import helpers as EShelpers
 
-from selection import Selections
+from selection_path import Selections
 
 app = Flask(__name__)
 
@@ -43,9 +43,24 @@ else:
     es = Elasticsearch([es_host], port=es_port, 
                         http_auth=(es_username, es_password))
 
+
 # ~ add api resource
-api.add_resource(Selections, '/api/selection', endpoint = 'sentselection',
-                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es })
+api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>/<string:orient>/<string:verbose>',
+                 endpoint = 'topicsselection-1',
+                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
+                 methods=['GET'])
+api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>/<string:orient>',
+                 endpoint = 'topicsselection-2',
+                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
+                 methods=['GET'])
+api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>',
+                 endpoint = 'topicsselection-3',
+                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
+                 methods=['GET'])
+api.add_resource(Selections, '/api/topics/path/get/<string:uid>',
+                 endpoint = 'topicsselection-4',
+                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
+                 methods=['GET'])
 
 @app.route('/service/info')
 def info():
@@ -54,3 +69,28 @@ def info():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
+
+"""
+About Flask tutorial:
+---------------------
+https://scotch.io/bar-talk/processing-incoming-request-data-in-flask
+https://stackoverflow.com/questions/36735341/how-do-i-access-a-resource-with-multiple-endpoints-with-flask-restful
+https://github.com/flask-restful/flask-restful/issues/666
+https://medium.com/@moschan/when-should-you-use-path-variable-and-query-parameter-a346790e8a6d
+https://stackoverflow.com/questions/29952341/flask-restful-custom-routes-for-each-http-method
+
+:query-string:
+--------------
+https://stackoverflow.com/questions/14032066/can-flask-have-optional-url-parameters
+https://stackoverflow.com/questions/45060043/flask-routing-with-multiple-optional-parameters
+https://stackoverflow.com/questions/15182696/multiple-parameters-in-in-flask-approute
+
+:path-variabel:
+---------------
+https://blog.miguelgrinberg.com/post/designing-a-restful-api-using-flask-restful
+
+:combine path-variable and query-string:
+----------------------------------------
+https://stackoverflow.com/questions/40369016/using-request-args-in-flask-for-a-variable-url
+
+"""

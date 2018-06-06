@@ -3,11 +3,15 @@ for docker and kubernetes related settings
 
 ### Penjelasan folder:
 1. **build_1_api**: container dan pod untuk rest api
-2. **build_1_cron_legacy**: berisi python module untuk master model data trainer(25 hari)
+2. **build_1_cron_legacy**: berisi python module untuk master model data trainer(25 hari), cukup dieksekusi 1x saja.
 3. **build_1_cron_daily**: berisi python module untuk online model trainer (per-1 jam, dengan mengambil per-8 jam back time windows)
 
-# deploy step:
+# Getting started:
+pindahkan 2 folder module yang ada di master folder *src/* ke dalam root folder pada setiap folder diatas, folder-folder yang harus dipindahkan adalah:
+1. **src/espandas**
+2. **src/googlenews**
 
+# Container and Pod deploy step:
 ### google clound setup
 * Run the following command to authenticate to the cluster:
 
@@ -99,5 +103,5 @@ restartPolicy: OnFailure -> dirubah ke Never
 ini mempermudah mencari bug
 ```
 
-# some usefull link:
+# Some usefull link:
 * [stackoverflow-1](https://stackoverflow.com/questions/45697327/load-large-data-from-bigquery-to-python)

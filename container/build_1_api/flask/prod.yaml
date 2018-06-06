@@ -7,7 +7,7 @@ metadata:
     project: topic-recommender-v1
     service: topicreco_api_service
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       project:  topic-recommender-v1

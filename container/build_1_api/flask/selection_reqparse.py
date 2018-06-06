@@ -7,7 +7,8 @@ import time
 import logging
 
 from flask import Response
-from flask_restful import reqparse, Resource
+from flask_restful import reqparse
+from flask_restful import Resource
 
 
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
@@ -54,10 +55,15 @@ class Selections(Resource):
         start_all_time = time.time()
         args = self.reqparse.parse_args()
 
+        verbose = args['verbose']
         uid = str(args['uid']).strip()
         orient = str(args['orient']).strip()
         storage = str(args['storage']).strip()
-        verbose = args['verbose']
+        
+        logger.info("uid: %s", uid)
+        logger.info("storage: %s", storage)
+        logger.info("verbose: %s", str(verbose))
+        logger.info("orient: %s", orient)
 
         if storage.strip().lower() == "datastore":
             logger.info("Begin querying datastore...")
@@ -135,6 +141,9 @@ class Selections(Resource):
         elif orient == 'index':
             results = A.to_dict('index')
         elif orient == 'records':
+            results = A.to_dict('records')
+        else:
+            logger.info("unknow orient %s, fallback to records orient !!", str(orient))
             results = A.to_dict('records')
 
         if verbose:

@@ -37,7 +37,7 @@ terdiri dari:
 
     folder ini berisikan modfied version dari repo utamanya yaitu:
 
-    * [espandas](https://github.com/dashaub/espandas)
+    * https://github.com/dashaub/espandas
 
 2. googlenews
 
