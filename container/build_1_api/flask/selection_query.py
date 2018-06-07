@@ -27,24 +27,13 @@ def str2bool(v):
         raise ValueError('Boolean value expected.')
 
 
-class Selections(Resource):
+class SelectionsQuery(Resource):
     def __init__(self, client, kind, es_client):
         self.client = client
         self.kind = kind
         self.es_client = es_client
-        """self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('uid', type=str, required=True, location='json',
-                                   help='User Id to fetch ranked topic recommender')
-        self.reqparse.add_argument('orient', choices=['list', 'records','index'], required=True,
-                                   location='json', default="list",
-                                   help='json pandas output orientation, should be one of [list, records, index]')
-        self.reqparse.add_argument('storage', choices=['datastore', 'elastic'], required=True,
-                                   location='json', default="datastore",
-                                   help='storage use to fetch the data, should be one of [datastore, elastic]')
-        self.reqparse.add_argument('verbose', type=str2bool, required=True, location='json', default="false",
-                                   help='show full output our not.')"""
 
-        super(Selections, self).__init__()
+        super(SelectionsQuery, self).__init__()
 
     def basic_query(self, client, kind, uid):
         # [START basic_query]
@@ -126,20 +115,26 @@ class Selections(Resource):
     def get(self):
         start_all_time = time.time()
 
-        uid = request.args.get('uid', "")
-        orient = request.args.get('orient', "")
-        storage = request.args.get('storage', "")
-        verbose = request.args.get('verbose', "")
-        
+        uid = request.args.get('uid', "0")
+        orient = request.args.get('orient', "records")
+        storage = request.args.get('storage', "elastic")
+        verbose = request.args.get('verbose', "False")
+
         logger.info("uid: %s", uid)
         logger.info("storage: %s", storage)
         logger.info("verbose: %s", str(verbose))
         logger.info("orient: %s", orient)
 
+        if uid == "":
+            logger.warning("UID is empty!!")
+
         if storage.strip().lower() == "datastore":
             logger.info("Datastore is not ready yet..fallback to Elastic!!")
             A = self.fetch_elastics(uid)
         elif storage.strip().lower() == "elastic":
+            A = self.fetch_elastics(uid)
+        else:
+            logger.warning("WARNING!! Storage not Explicitly given...fallback to Elastic Storage!!")
             A = self.fetch_elastics(uid)
 
         end_all_time = time.time() - start_all_time

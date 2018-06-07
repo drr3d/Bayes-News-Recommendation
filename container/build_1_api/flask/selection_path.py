@@ -129,6 +129,9 @@ class Selections(Resource):
             A = self.fetch_elastics(uid)
         elif storage.strip().lower() == "elastic":
             A = self.fetch_elastics(uid)
+        else:
+            logger.warning("WARNING!! Storage not Explicitly given...fallback to Elastic Storage!!")
+            A = self.fetch_elastics(uid)
         
         end_all_time = time.time() - start_all_time
         # print 'Time taken to transform output: %.7f' % end_all_time

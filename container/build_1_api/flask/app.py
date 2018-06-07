@@ -12,6 +12,7 @@ from elasticsearch import Elasticsearch
 # from elasticsearch import helpers as EShelpers
 
 from selection_path import Selections
+from selection_query import SelectionsQuery
 
 app = Flask(__name__)
 
@@ -62,6 +63,11 @@ api.add_resource(Selections, '/api/topics/path/get/<string:uid>',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
 
+api.add_resource(SelectionsQuery, '/api/topics/query/get/',
+                 endpoint = 'topicsselection-querystring-1',
+                 resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
+                 methods=['GET'])
+
 @app.route('/service/info')
 def info():
     metadata = {'name': 'reco-topic-flask-api', 'version': '0.1.X', 'api': ['/selection']}
@@ -84,6 +90,13 @@ https://stackoverflow.com/questions/29952341/flask-restful-custom-routes-for-eac
 https://stackoverflow.com/questions/14032066/can-flask-have-optional-url-parameters
 https://stackoverflow.com/questions/45060043/flask-routing-with-multiple-optional-parameters
 https://stackoverflow.com/questions/15182696/multiple-parameters-in-in-flask-approute
+https://stackoverflow.com/questions/11774265/how-do-you-get-a-query-string-on-flask
+http://www.compciv.org/guides/python/how-tos/creating-proper-url-query-strings/
+https://stackoverflow.com/questions/40369016/using-request-args-in-flask-for-a-variable-url
+https://github.com/flask-restful/flask-restful/issues/114
+http://flask.pocoo.org/snippets/129/
+https://stackoverflow.com/questions/34587634/get-query-string-as-function-parameters-on-flask
+https://stackoverflow.com/questions/11774265/how-do-you-get-a-query-string-on-flask
 
 :path-variabel:
 ---------------
@@ -92,5 +105,9 @@ https://blog.miguelgrinberg.com/post/designing-a-restful-api-using-flask-restful
 :combine path-variable and query-string:
 ----------------------------------------
 https://stackoverflow.com/questions/40369016/using-request-args-in-flask-for-a-variable-url
+
+:handling error:
+https://damyanon.net/post/flask-series-logging/
+https://opensource.com/article/17/3/python-flask-exceptions
 
 """
