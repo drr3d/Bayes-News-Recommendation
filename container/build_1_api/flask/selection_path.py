@@ -40,6 +40,13 @@ class Selections(Resource):
         return query.fetch()
     
     def fetch_datastore(self, uid):
+        """
+            Fetch data from Google datastore
+
+            param:
+            ------
+            uid = (string)
+        """
         logger.info("Begin querying datastore...")
         logger.info("finding uid: %s", uid)
         start_total_time = time.time()
@@ -62,6 +69,13 @@ class Selections(Resource):
         return A
 
     def fetch_elastics(self, uid):
+        """
+            Fetch data from Elasticsearch
+
+            param:
+            ------
+            uid = (string)
+        """
         logger.info("Begin querying elastic...")
         logger.info("finding uid: %s", uid)
 
@@ -78,8 +92,8 @@ class Selections(Resource):
 
         params = {"size":  30}
         res = esclient.search(index='topicrecommendation_transform_index',
-                                doc_type='topicrecommendation_transform_type',
-                                body=doc, params=params)
+                              doc_type='topicrecommendation_transform_type',
+                              body=doc, params=params)
 
         hits = res['hits']['hits']
         data = [hit["_source"] for hit in hits]
@@ -99,8 +113,8 @@ class Selections(Resource):
                     }
             params = {"size":  30}
             res = esclient.search(index='topicrecommendation_transform_fallback_index',
-                                doc_type='topicrecommendation_transform_fallback_type',
-                                body=doc, params=params)
+                                  doc_type='topicrecommendation_transform_fallback_type',
+                                  body=doc, params=params)
 
             hits = res['hits']['hits']
             data = [hit["_source"] for hit in hits]
@@ -113,6 +127,9 @@ class Selections(Resource):
         return A
 
     def get(self, uid, storage='elastic', orient='records', verbose="false"):
+        """
+            Get topics
+        """
         start_all_time = time.time()
     
         uid = str(uid)

@@ -45,28 +45,29 @@ else:
                         http_auth=(es_username, es_password))
 
 
-# ~ add api resource
-api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>/<string:orient>/<string:verbose>',
-                 endpoint = 'topicsselection-1',
+# ~~ add api resource ~~
+api.add_resource(Selections, '/v1/topics/path/<string:uid>/<string:storage>/<string:orient>/<string:verbose>',
+                 endpoint = 'topicselection-1',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
-api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>/<string:orient>',
-                 endpoint = 'topicsselection-2',
+api.add_resource(Selections, '/v1/topics/path/<string:uid>/<string:storage>/<string:orient>',
+                 endpoint = 'topicselection-2',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
-api.add_resource(Selections, '/api/topics/path/get/<string:uid>/<string:storage>',
-                 endpoint = 'topicsselection-3',
+api.add_resource(Selections, '/v1/topics/path/<string:uid>/<string:storage>',
+                 endpoint = 'topicselection-3',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
-api.add_resource(Selections, '/api/topics/path/get/<string:uid>',
-                 endpoint = 'topicsselection-4',
+api.add_resource(Selections, '/v1/topics/path/<string:uid>',
+                 endpoint = 'topicselection-4',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
 
-api.add_resource(SelectionsQuery, '/api/topics/query/get/',
-                 endpoint = 'topicsselection-querystring-1',
+api.add_resource(SelectionsQuery, '/v1/topics/query/',
+                 endpoint = 'topicselection-querystring-1',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
+# ~~~~~~
 
 @app.route('/service/info')
 def info():

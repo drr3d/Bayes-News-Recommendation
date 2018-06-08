@@ -42,6 +42,13 @@ class SelectionsQuery(Resource):
         return query.fetch()
 
     def fetch_datastore(self, uid):
+        """
+            Fetch data from Google datastore
+
+            param:
+            ------
+            uid = (string)
+        """
         logger.info("Begin querying datastore...")
         start_total_time = time.time()
 
@@ -51,9 +58,9 @@ class SelectionsQuery(Resource):
 
         end_total_time = time.time() - start_total_time
         logger.info('Time taken to querying datastore: %.7f', end_total_time)
-        
+
         logger.info("Begin transform output...")
-        
+
         user_data = []
         for d in iterator:
             user_data.append([d["topic_id"], d["is_general"], d["rank"], d["p0_posterior"]])
@@ -63,6 +70,13 @@ class SelectionsQuery(Resource):
         return A
 
     def fetch_elastics(self, uid):
+        """
+            Fetch data from Elasticsearch
+
+            param:
+            ------
+            uid = (string)
+        """
         logger.info("Begin querying elastic...")
         logger.info("finding uid: %s", uid)
 
@@ -71,16 +85,16 @@ class SelectionsQuery(Resource):
         doc = {
                 "query": {
                     "match": {
-                        "user_id": uid
-                    }
-                },
+                              "user_id": uid
+                              }
+                          },
                 '_source' : col_source
-            }
+               }
 
         params = {"size":  30}
         res = esclient.search(index='topicrecommendation_transform_index',
-                                doc_type='topicrecommendation_transform_type',
-                                body=doc, params=params)
+                              doc_type='topicrecommendation_transform_type',
+                              body=doc, params=params)
 
         hits = res['hits']['hits']
         data = [hit["_source"] for hit in hits]
@@ -113,6 +127,9 @@ class SelectionsQuery(Resource):
         return A
 
     def get(self):
+        """
+            Get topics
+        """
         start_all_time = time.time()
 
         uid = request.args.get('uid', "0")
