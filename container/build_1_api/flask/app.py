@@ -18,7 +18,7 @@ app = Flask(__name__)
 
 app.logger.addHandler(logging.StreamHandler())
 app.logger.setLevel(logging.INFO)
-app.config['DEBUG'] = True
+app.config['DEBUG'] = False #change to False for production
 
 api = Api(app)
 
@@ -63,7 +63,7 @@ api.add_resource(Selections, '/v1/topics/path/<string:uid>',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
 
-api.add_resource(SelectionsQuery, '/v1/topics/query/',
+api.add_resource(SelectionsQuery, '/v1/topics/',
                  endpoint = 'topicselection-querystring-1',
                  resource_class_kwargs={'client': client, 'kind': kind, 'es_client':es },
                  methods=['GET'])
@@ -75,7 +75,7 @@ def info():
     return Response(json.dumps(metadata), status=200, mimetype='application/json')
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=False, host='0.0.0.0')
 
 """
 About Flask tutorial:
