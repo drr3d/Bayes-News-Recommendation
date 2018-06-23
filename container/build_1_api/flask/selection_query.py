@@ -35,13 +35,13 @@ class SelectionsQuery(Resource):
 
         super(SelectionsQuery, self).__init__()
 
-    def basic_query(self, client, kind, uid):
+    def basicQuery(self, client, kind, uid):
         # [START basic_query]
         query = client.query(kind=kind)
         query.add_filter('user_id', '=', uid)
         return query.fetch()
 
-    def fetch_datastore(self, uid):
+    def fetchDatastore(self, uid):
         """
             Fetch data from Google datastore
 
@@ -54,7 +54,7 @@ class SelectionsQuery(Resource):
 
         client = self.client
         kind = self.kind
-        iterator = self.basic_query(client, kind, uid)
+        iterator = self.basicQuery(client, kind, uid)
 
         end_total_time = time.time() - start_total_time
         logger.info('Time taken to querying datastore: %.7f', end_total_time)
@@ -69,7 +69,7 @@ class SelectionsQuery(Resource):
         A = A.sort_values(['is_general', 'rank'], ascending=[False, True])
         return A
 
-    def fetch_elastics(self, uid):
+    def fetchElastics(self, uid):
         """
             Fetch data from Elasticsearch
 
@@ -99,7 +99,7 @@ class SelectionsQuery(Resource):
         hits = res['hits']['hits']
         data = [hit["_source"] for hit in hits]
         A = pd.DataFrame(data, columns=col_source)
-        if len(A.index) > 0:
+        if A.index:
             A['rank'] = A.groupby(['user_id', 'topic_is_general'])['interest_score'].rank(ascending=False)
             A = A.sort_values(['topic_is_general', 'rank'], ascending=[False, True])
         else:
@@ -147,12 +147,12 @@ class SelectionsQuery(Resource):
 
         if storage.strip().lower() == "datastore":
             logger.info("Datastore is not ready yet..fallback to Elastic!!")
-            A = self.fetch_elastics(uid)
+            A = self.fetchElastics(uid)
         elif storage.strip().lower() == "elastic":
-            A = self.fetch_elastics(uid)
+            A = self.fetchElastics(uid)
         else:
             logger.warning("WARNING!! Storage not Explicitly given...fallback to Elastic Storage!!")
-            A = self.fetch_elastics(uid)
+            A = self.fetchElastics(uid)
 
         end_all_time = time.time() - start_all_time
         print 'Time taken to transform output: %.7f' % end_all_time

@@ -45,7 +45,7 @@ class Selections(Resource):
 
         super(Selections, self).__init__()
 
-    def basic_query(self, client, kind, uid):
+    def basicQuery(self, client, kind, uid):
         # [START basic_query]
         query = client.query(kind=kind)
         query.add_filter('user_id', '=', uid)
@@ -71,7 +71,7 @@ class Selections(Resource):
 
             client = self.client
             kind = self.kind
-            iterator = self.basic_query(client, kind, uid)
+            iterator = self.basicQuery(client, kind, uid)
 
             end_total_time = time.time() - start_total_time
             logger.info('Time taken to querying datastore: %.7f', end_total_time)
