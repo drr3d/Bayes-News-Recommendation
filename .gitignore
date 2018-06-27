@@ -1,2 +1,4 @@
 #Python compiled file
 *.pyc
+*.log
+*.zip

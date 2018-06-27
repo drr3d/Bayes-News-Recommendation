@@ -150,13 +150,12 @@ class GBayesTopicRecommender(object):
 
         # concat with history train
         if sigma_nt_hist is not None:
-            print "self.sum_all_nt before concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
             self.sum_all_nt = pd.concat([self.sum_all_nt, sigma_nt_hist]).groupby(['user_id'], as_index=False)['sigma_Nt'].sum()
-            print "self.sum_all_nt after concate:\n", self.sum_all_nt[self.sum_all_nt['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
 
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
             # ~~~~~
+            print "Using FULL BAYES!!"
             user_marginal_click = result2.groupby(['date', 'user_id'])['num_y'].agg('sum')
             user_marginal_click = user_marginal_click.to_frame().reset_index()
             user_marginal_click = user_marginal_click.rename(columns={'num_y': 'num_y_marg'})
@@ -170,15 +169,14 @@ class GBayesTopicRecommender(object):
             model['joinprob_ci'] = pd.eval('model.num_x / model.num_y_marg')
             model['joinprob_notci'] = pd.eval('(model.num_y - model.num_x) / model.num_y_marg')
 
+            # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
+            model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
+            
             # Next dev, should be more dynamic in handling
             #   marginal likelihood of multiple event.
-            model['posterior'] = pd.eval('''
-            ((model.joinprob_ci / model.p_click) * model.p_click) /
-            (
-                ((model.joinprob_ci / model.p_click) * model.p_click) +
-                ((model.joinprob_notci / model.p_notclick) * model.p_notclick)
-             )
-            ''')
+            model['posterior'] = pd.eval('''((model.joinprob_ci / model.p_click) * model.p_click) /(((model.joinprob_ci / model.p_click) * model.p_click) + ((model.joinprob_notci / model.p_notclick) * model.p_notclick))''')
 
         else:
             # ~~~~~
@@ -206,6 +204,8 @@ class GBayesTopicRecommender(object):
             #   => p(category = ci | click) / p(category = ci)
             model['posterior'] = pd.eval('model.joinprob_ci / model.p_cat_ci')
 
+        print "Testing on model Fit"
+        print model[["topic_id", "joinprob_ci", "p_cat_ci", "posterior", "Ntotal"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
         return model
 
     def transform(self, df1, df2, fitted_model,
@@ -245,8 +245,8 @@ class GBayesTopicRecommender(object):
         cur_result2 = pd.merge(df2, cursum_all_click, on=['date'])
         cur_result2 = cur_result2.rename(columns={'num': 'date_all_click'})
         cur_result2['p0_cat_ci'] = pd.eval('cur_result2.num_y / cur_result2.date_all_click')
-        cur_result2 = cur_result2.groupby(['topic_id', 'p0_cat_ci']).size().to_frame().reset_index()
-        cur_result2 = cur_result2[['topic_id', 'p0_cat_ci']]
+        cur_result2 = cur_result2.groupby(['topic_id', 'p0_cat_ci', 'num_y']).size().to_frame().reset_index()
+        cur_result2 = cur_result2[['topic_id', 'p0_cat_ci', 'num_y']]
 
         # ~~~~
         # ada kemungkinan kita cukup save fitted_models saja untuk perhitungan perharinya,
@@ -257,7 +257,7 @@ class GBayesTopicRecommender(object):
         #    > sigma_Nt
         fitted_models['pt_posterior_x_Nt'] = pd.eval('fitted_models.posterior * fitted_models.Ntotal')
         fitted_models = fitted_models.groupby(['user_id',
-                                               'topic_id'])['pt_posterior_x_Nt'].agg('sum')
+                                                'topic_id'])['pt_posterior_x_Nt'].agg('sum')
         fitted_models = fitted_models.reset_index()
 
         # its called smoothed because we add certain value of virtual click
@@ -268,11 +268,13 @@ class GBayesTopicRecommender(object):
         # ~ disini baru dilakukan concate dataframe
         if fitted_model_hist is not None:
             print "Combining current fitted_models with history..."
-            
-            print "fitted_model_hist:\n"
-            print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
+            print "fitted_models:"
+            print fitted_models.head(3)
+            print "fitted_model_hist:"
+            print fitted_model_hist.head(3)
             fitted_models = pd.concat([fitted_models, fitted_model_hist], ignore_index=True)
             print "len of fitted models after concat: %d" % len(fitted_models)
+
             print "Recalculating fitted models..."
             """
                 Based on equation 4 and 7, dimana:
@@ -281,17 +283,17 @@ class GBayesTopicRecommender(object):
             """
             fitted_models = fitted_models.groupby(['user_id',
                                                    'topic_id'])['pt_posterior_x_Nt'].agg('sum')
+
             fitted_models = fitted_models.reset_index()
 
         # its called smoothed because we add certain value of virtual click
         fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-        print "fitted_models after cobine:\n"
-        print fitted_model_hist[fitted_model_hist['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
-        print "Len of fitted_models after all concat process on main class: %d" % len(fitted_models)
-
         fitted_models['p0_cat_ci'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
                                                                             cur_result2.p0_cat_ci)),
                                                                             na_action=0.)
+        fitted_models['num_y'] = fitted_models['topic_id'].map(dict(zip(cur_result2.topic_id,
+                                                                            cur_result2.num_y)),
+                                                                   na_action=0.)
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):
@@ -307,5 +309,18 @@ class GBayesTopicRecommender(object):
         # Zero value would occur for any topic_Ui if those topic
         #   do not have any click
         model = model.fillna(0.)
+
+        # validate if any final p0_posterior greater than 1:
+        exhausted_proba = model[["user_id", "topic_id", "pt_posterior_x_Nt",
+                                 "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]].loc[model["p0_posterior"] > 1.]
+        print model[["user_id", "topic_id", "pt_posterior_x_Nt",
+                     "smoothed_pt_posterior", "p0_cat_ci",
+                     "sigma_Nt"]].loc[model["user_id"]=="1612d19bc2f113-0819fdf6c9972-3130446b-38400-1612d19bc309e"]
+        if len(exhausted_proba) > 0:
+            print "Warning, there are %d data that have final posterior more than 1." % len(exhausted_proba)
+            print "exhausted_proba:\n", exhausted_proba.head(15)
+        else:
+            print "~ Empty exhausted_proba, thats good ~"
+        del exhausted_proba
 
         return model, fitted_models

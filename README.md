@@ -11,10 +11,7 @@ System ini merupakan re-implementasi dari jurnal aslinya yaitu:
 Penjelasan folder:
 
 ### rest-api:
-digunakan untuk REST API, dibuat menggunakan Python Flask
-
-### container
-berisikan *Docker container* dan *Kubernetes pod* yang digunakan sebagai deployment environtment utama.
+digunakan untuk REST API, dibuat menggunakan Python `Flask` dan `Falcon`, untuk yang digunakan pada production server sekarang adalah Python `Flask`.
 
 ### model-trainer
 digunakan sebagai data trainer untuk menghasilkan model, terdiri dari 2:

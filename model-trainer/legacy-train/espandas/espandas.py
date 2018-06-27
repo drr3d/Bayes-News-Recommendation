@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 import ujson as json
 import logging
+import sys
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.exceptions import NotFoundError
@@ -79,6 +80,7 @@ class Espandas(object):
         :param index: the ElasticSearch index
         :param doc_type: the ElasticSearch doc_type
         """
+        logger.info("memory used befor es save: %.3f percent memory...", psutil.virtual_memory().percent)
         if not isinstance(df, pd.DataFrame):
             raise ValueError('df must be a pandas DataFrame')
 
@@ -103,7 +105,7 @@ class Espandas(object):
             records = df.to_json(orient='records')
             records = json.loads(records)
             for record in records:
-                logger.info("generate_dict() using %.3f percent memory...", psutil.virtual_memory().percent)
+                # logger.info("generate_dict() using %.3f percent memory...", psutil.virtual_memory().percent)
                 yield record
 
         # The dataframe should be sorted by column name
@@ -111,13 +113,31 @@ class Espandas(object):
 
         # ~ to handling OOM ~
         df = df.reindex(sorted(df.columns), axis=1).copy()
-        logger.info("reindex using %.3f percent memory...", psutil.virtual_memory().percent)
+        logger.info("after reindex using %.3f percent memory...", psutil.virtual_memory().percent)
 
+        """
         data = ({'_index': index,
                  '_type': doc_type,
                  '_id': record[index_name],
-                 '_source': record}
+                 'doc': {x: record[x] for x in record if x not in {index_name}},
+                 'doc_as_upsert': True}
                 for record in generate_dict(df))
+        logger.info("doc_as_upsert is True !!")
+        """
+        data = ({'_op_type': 'update',
+                 '_index': index,
+                 '_type': doc_type,
+                 '_id': record[index_name],
+                 'doc': {x: record[x] for x in record if x not in {index_name}},
+                 'doc_as_upsert': True}
+                for record in generate_dict(df))
+        logger.info("doc_as_upsert is True ~ Modified version + using op_type(update) !!")
+        
         del df
         logger.info("final espandas, using %.3f percent memory...", psutil.virtual_memory().percent)
-        helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+
+        try:
+            helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            pass

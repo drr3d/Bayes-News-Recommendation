@@ -144,6 +144,7 @@ class GBayesTopicRecommender(object):
         # ~~~~~ Model ~~~~~~~
         if full_bayes:
             # ~~~~~
+            print "Using FULL BAYES!!"
             user_marginal_click = result2.groupby(['date', 'user_id'])['num_y'].agg('sum')
             user_marginal_click = user_marginal_click.to_frame().reset_index()
             user_marginal_click = user_marginal_click.rename(columns={'num_y': 'num_y_marg'})
@@ -157,15 +158,14 @@ class GBayesTopicRecommender(object):
             model['joinprob_ci'] = pd.eval('model.num_x / model.num_y_marg')
             model['joinprob_notci'] = pd.eval('(model.num_y - model.num_x) / model.num_y_marg')
 
+            # p_cat_ci => p(category = ci) => D(t)
+            # karena date_all_click adalah seluruh total click pada periode t,
+            #    maka tidak tergantung pada data history
+            model['p_cat_ci'] = pd.eval('model.num_y / model.date_all_click')
+
             # Next dev, should be more dynamic in handling
             #   marginal likelihood of multiple event.
-            model['posterior'] = pd.eval('''
-            ((model.joinprob_ci / model.p_click) * model.p_click) /
-            (
-                ((model.joinprob_ci / model.p_click) * model.p_click) +
-                ((model.joinprob_notci / model.p_notclick) * model.p_notclick)
-             )
-            ''')
+            model['posterior'] = pd.eval('''((model.joinprob_ci / model.p_click) * model.p_click) /(((model.joinprob_ci / model.p_click) * model.p_click) + ((model.joinprob_notci / model.p_notclick) * model.p_notclick))''')
 
         else:
             # ~~~~~
@@ -242,7 +242,8 @@ class GBayesTopicRecommender(object):
 
         # its called smoothed because we add certain value of virtual click
         fitted_models['smoothed_pt_posterior'] = fitted_models.eval('pt_posterior_x_Nt + @G')
-
+        print "Len of fitted_models on main class: %d" % len(fitted_models)
+        print fitted_models.head(10)
         # ~~~~
         model = fitted_models.copy(deep=True)
         if isinstance(self.sum_all_nt, pd.DataFrame):
@@ -259,4 +260,10 @@ class GBayesTopicRecommender(object):
         #   do not have any click
         model = model.fillna(0.)
 
+        exhausted_proba = model[["user_id", "topic_id", "p0_posterior"]].loc[model["p0_posterior"] > 1.]
+        if len(exhausted_proba) > 0:
+            print "Warning, there are %d data that have final posterior more than 1." % len(exhausted_proba)
+            print "exhausted_proba:\n", exhausted_proba
+        else:
+            print "There is NONE of final posterior that have value more than 1. "
         return model, fitted_models

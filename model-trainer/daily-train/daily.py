@@ -17,83 +17,25 @@ from google.cloud import bigquery
 from googlenews.BayesTopicRecommender import GBayesTopicRecommender
 
 from elasticsearch import Elasticsearch
-from elasticsearch import RequestsHttpConnection
 from elasticsearch import helpers as EShelpers
 from datetime import timedelta
 
 import modelhandler as mh  # comment if you have another method for saving models
+import transporthandler as th
 from espandas import Espandas
+from utility import *
 
-# logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
-# logger = logging.getLogger(__name__)
-
-# ~~~~~~~~~~~~~
-logger = logging.getLogger('memory_profile6_log')
-logger.setLevel(logging.DEBUG)
-
-from memory_profiler import profile
-# create file handler which logs even debug messages
-fh = logging.FileHandler("memory_profile6.log")
-fh.setLevel(logging.DEBUG)
-
-# create formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-
-# add the handlers to the logger
-logger.addHandler(fh)
-from memory_profiler import LogFile
-import sys
-sys.stdout = LogFile('memory_profile6_log', reportIncrementFlag=False)
-# ~~~~~~~~~~~~~
-
-
-elastic_host = "https://9db53c7bb4f5be2d856033a9aeb6e5a5.us-central1.gcp.cloud.es.io"
-elastic_username = "elastic"
-elastic_port = 9243
-elastic_password = "W0y1miwmrSMZKkSIARzbxJgb"
-
-logger.info("ElasticSearch host: %s", elastic_host)
-logger.info("ElasticSearch port: %s", elastic_port)
-es = Elasticsearch([elastic_host], port=elastic_port,
-                    http_auth=(elastic_username, elastic_password))
-esp = Espandas(hosts=[elastic_host], port=elastic_port, http_auth=(elastic_username, elastic_password))
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 pd.set_option('display.width', 1000)
-
-def humanbytes(B):
-    'Return the given bytes as a human friendly KB, MB, GB, or TB string'
-    B = float(int(B))
-    KB = float(1024)
-    MB = float(KB ** 2) # 1,048,576
-    GB = float(KB ** 3) # 1,073,741,824
-    TB = float(KB ** 4) # 1,099,511,627,776
-    if B < KB:
-        return '{0} {1}'.format(B,'Bytes' if 0 == B > 1 else 'Byte')
-    elif KB <= B < MB:
-        return '{0:.2f} KB'.format(B/KB)
-    elif MB <= B < GB:
-        return '{0:.2f} MB'.format(B/MB)
-    elif GB <= B < TB:
-        return '{0:.2f} GB'.format(B/GB)
-    elif TB <= B:
-        return '{0:.2f} TB'.format(B/TB)
-
-
-def str2bool(v):
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def loadBQ(client, query, job_config, tabletype="history"):
     # https://github.com/ofek/pypinfo/issues/27
     job_config.use_legacy_sql = False
     job_config.allowLargeResults = True
-
+    logger.info("query on loadBQ: %s", query)
     result = client.query(query, job_config=job_config)
     rows = result.result()
 
@@ -110,29 +52,12 @@ def loadBQ(client, query, job_config, tabletype="history"):
 
     return df
 
-def dateValidate(date_text):
-    """
-        to validate date input format
-    """
-    try:
-        datetime.datetime.strptime(date_text, '%Y-%m-%d')
-        return True
-    except ValueError:
-        raise ValueError("Incorrect data format, should be YYYY-MM-DD")
-
-def kill_proc_tree(pid, including_parent=False):    
-    parent = psutil.Process(pid)
-    for child in parent.children(recursive=True):
-        child.kill()
-    if including_parent:
-        parent.kill()
-
-@profile
 def main(df_input, df_current, df_hist,
          current_date, G, project_id,
          savetrain=False, multproc=True,
          threshold=0, start_date=None, end_date=None,
-         saveto="datastore", fitted_models_hist=None):
+         saveto="datastore", fitted_models_hist=None,
+         esp=None):
     """
         Main Process
     """
@@ -177,10 +102,10 @@ def main(df_input, df_current, df_hist,
     logger.info("len of uniques_fit_hist:%d", len(uniques_fit_hist))
     uniques_fit_hist = uniques_fit_hist.drop_duplicates(subset=['user_id','sigma_Nt'])
     logger.info("len of uniques_fit_hist after drop duplicate:%d", len(uniques_fit_hist))
-
+    # uniques_fit_hist = None
     # begin fit
     model_fit = BR.fit(df_dut, df_input_X,
-                       full_bayes=False, use_sigmant=fitby_sigmant,
+                       full_bayes=True, use_sigmant=fitby_sigmant,
                        sigma_nt_hist=uniques_fit_hist, verbose=False)
     logger.info("Len of model_fit: %d", len(model_fit))
     logger.info("Len of df_dut: %d", len(df_dut))
@@ -197,14 +122,17 @@ def main(df_input, df_current, df_hist,
     df_input_X = result[['date', 'user_id', 'topic_id',
                          'num_x', 'num_y', 'is_general']]
 
-    # print "model_fit dtypes:\n", model_fit.dtypes
-    # print "fitted_models_hist dtypes:\n", fitted_models_hist.dtypes
     model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
                                                   fitted_model=model_fit,
                                                   fitted_model_hist=fitted_models_hist[["pt_posterior_x_Nt",
                                                                                         "topic_id", "user_id"]],
                                                   verbose=False)
-
+    """
+    model_transform, fitted_models = BR.transform(df1=df_dt, df2=df_input_X,
+                                                fitted_model=model_fit,
+                                                fitted_model_hist=None,
+                                                verbose=False)
+    """
     # ~~~ filter is general and specific topic ~~~
     # the idea is just we need to rerank every topic according
     #    to user_id and and is_general by p0_posterior
@@ -212,10 +140,14 @@ def main(df_input, df_current, df_hist,
                                   'is_general']].groupby(['topic_id',
                                                           'is_general']
                                                          ).size().to_frame().reset_index()
-
-    # map_topic_isgeneral = map_topic_isgeneral.loc[~map_topic_isgeneral.index.duplicated(keep='first')]
-    # model_transform = model_transform.loc[~model_transform.index.duplicated(keep='first')]
     model_transform['is_general'] = model_transform['topic_id'].map(map_topic_isgeneral.drop_duplicates('topic_id').set_index('topic_id')['is_general'])
+
+    # ~ handler mapping topic_name
+    map_topic_name = df_dut[['topic_id',
+                             'topic_name']].groupby(['topic_id',
+                                                           'topic_name']
+                                                    ).size().to_frame().reset_index()
+    model_transform['topic_name'] = model_transform['topic_id'].map(map_topic_name.drop_duplicates('topic_id').set_index('topic_id')['topic_name'])
 
     # ~ start by provide rank for each topic type ~
     model_transform['rank'] = model_transform.groupby(['user_id', 'is_general'])['p0_posterior'].rank(ascending=False)
@@ -228,7 +160,6 @@ def main(df_input, df_current, df_hist,
                                           (model_transform['p0_posterior'] > 0.)]
 
     train_time = time.time() - t0
-    print model_transform[model_transform['user_id']=='1616f009d96b1-0285d8288a5bce-70217860-38400-1616f009d98157']
     logger.info("Len of model_transform: %d", len(model_transform))
     logger.info("Len of df_dt: %d", len(df_dt))
     logger.info("Total train time: %0.3fs", train_time)
@@ -252,106 +183,15 @@ def main(df_input, df_current, df_hist,
     logger.info("deleting model_fit...")
     del result
     logger.info("deleting result...")
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Save model Here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    if savetrain:
-        model_transformsv = model_transform[['user_id', 'topic_id', 'is_general', 'p0_posterior', 'rank']].copy(deep=True)
-        model_transformsv['date'] = current_date.strftime("%Y-%m-%d")  # we need manually adding date, because table not support
-        model_transformsv['date'] = pd.to_datetime(model_transformsv['date'],
-                                                   format='%Y-%m-%d', errors='coerce')
-        print "list(model_transformsv) before rename: ", list(model_transformsv) 
-        print model_transformsv[['date']].head(5)      
-        print len(model_transformsv)                
-        model_transformsv = model_transformsv.rename(columns={'is_general': 'topic_is_general', 'p0_posterior': 'interest_score',
-                                                              'rank':'interest_rank' , 'date':'interest_score_created_at'})
-        print "list(model_transformsv) after rename: ", list(model_transformsv)    
-        print len(model_transformsv) 
-        del model_transform
-        logger.info("deleting model_transform...")
-        logger.info("memory left after cleaning: %.3f percent memory...", psutil.virtual_memory().percent)
-
-        logger.info("Begin saving trained data...")
-        # ~ Place your code to save the training model here ~
-        if str(saveto).lower() == "datastore":
-            logger.info("Using google datastore as storage...")
-            if multproc:
-                # ~ save transform models ~
-                logger.info("Saving main Transform model to Google DataStore...")
-                logger.info("Saving total data: %d", len(model_transformsv))
-                mh.saveDataStorePutMulti(model_transformsv)
-
-                # ~ save fitted models ~
-                logger.info("Saving fitted_models as history to Google DataStore...")
-                save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-                fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
-                logger.info("Saving total data: %d", len(fitted_models_sigmant))
-                X_split = np.array_split(fitted_models_sigmant, 10)
-                logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
-                for ix in range(len(X_split)):
-                    logger.info("processing batch-%d", ix)
-                    mh.saveDataStorePutMulti(X_split[ix], kinds='topic_recomendation_history')
-
-                del X_split
-                logger.info("deleting X_split...")
-                del save_sigma_nt
-                logger.info("deleting save_sigma_nt...")
-
-                del BR
-                logger.info("deleting BR...")
-
-        elif str(saveto).lower() == "elastic":
-            logger.info("Using ElasticSearch as storage...")
-            logging.info("Saving main Transform model to Elasticsearch...")
-            # print model_transformsv.head(5)
-            
-            X_split = np.array_split(model_transformsv, 15)
-            logger.info("Saving total data: %d", len(model_transformsv))
-            logger.info("Len of X_split for batch save model_transformsv: %d", len(X_split))
-            for ix in range(len(X_split)):
-                logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp, ishist=False)
-            del X_split
-            
-
-            logger.info("Saving fitted_models as history to Elasticsearch...")
-            save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-            fitted_models_sigmant = pd.merge(fitted_models, save_sigma_nt, on=['user_id'])
-
-            fitted_models_sigmant['uid_topid'] = fitted_models_sigmant["user_id"].map(str) + "_" + fitted_models_sigmant["topic_id"].map(str)
-            fitted_models_sigmant = fitted_models_sigmant[["uid_topid", "pt_posterior_x_Nt", "smoothed_pt_posterior", "p0_cat_ci", "sigma_Nt"]]
-  
-            X_split = np.array_split(fitted_models_sigmant, 50)
-            logger.info("Saving total data: %d", len(fitted_models_sigmant))
-            logger.info("Len of X_split for batch save fitted_models: %d", len(X_split))
-            for ix in range(len(X_split)):
-                logger.info("processing batch-%d", ix)
-                mh.saveElasticS(X_split[ix], esp,
-                                esindex_name="fitted_hist_index",
-                                estype_name='fitted_hist_type',
-                                ishist=True)
-            del X_split
-            
-            del BR
-            logger.info("deleting BR...")
-            del save_sigma_nt
-            logger.info("deleting save_sigma_nt...")
-            del fitted_models_sigmant
-            logger.info("deleting fitted_models_sigmant...")
-
-        # need save sigma_nt for daily train
-        # secara defaul perhitungan fit menggunakan sigma_Nt
-        #   jadi prosedur ini hanya berlaku jika fitby_sigmant = False
-        if start_date and end_date:
-            if not fitby_sigmant:
-                logging.info("Saving sigma Nt...")
-                save_sigma_nt = BR.sum_all_nt.copy(deep=True)
-                save_sigma_nt['start_date'] = start_date
-                save_sigma_nt['end_date'] = end_date
-                print save_sigma_nt.head(5)
-                print "len(save_sigma_nt): %d" % len(save_sigma_nt)
-                # mh.saveDatastoreMP(save_sigma_nt)
+    th.saveMainModel(savetrain, model_transform, BR, current_date,
+                     saveto, multproc, map_topic_name,
+                     fitted_models, esp)
     return
+
 
 def getBig(procdate, query_fit):
     bq_client = bigquery.Client()
@@ -359,7 +199,7 @@ def getBig(procdate, query_fit):
 
     logger.info("Collecting training data for date: %s", procdate)
     # ~ get genuine news interest ~
-    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 20000" 
+    query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
 
     # safe handling of query parameter
     query_params = [
@@ -367,7 +207,6 @@ def getBig(procdate, query_fit):
     ]
 
     job_config.query_parameters = query_params
-    # temp_df = load_bigquery(client, query_fit + query_fit_where, job_config)
     temp_df = loadBQ(bq_client, query_fit + query_fit_where, job_config)
 
     if temp_df.empty:
@@ -377,7 +216,7 @@ def getBig(procdate, query_fit):
         logger.info("getting total: %d training data(genuine interest) for date: %s" % (len(temp_df), procdate))
         return temp_df
 
-@profile
+
 def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
     bq_client = client
     job_config = bigquery.QueryJobConfig()
@@ -401,16 +240,11 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                             disini antara kita gabungkan dengan tframe, atau buat df sendiri
                         """
                         logger.info("processing batch-%d", ix)
-                        # https://stackoverflow.com/questions/16476924/how-to-iterate-over-rows-in-a-dataframe-in-pandas'
                         logger.info("creating list history data...")
-                        #lhistory = list(X_split[ix]["user_id"].head(1000).map(str) + "_" + X_split[ix]["topic_id"].head(1000).map(str))
                         lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
 
                         logger.info("call history data...")
                         h_frame = mh.loadDSHistory(lhistory)
-
-                        # me = os.getpid()
-                        # kill_proc_tree(me)
 
                         logger.info("done collecting history data, appending now...")
                         for m in h_frame:
@@ -423,18 +257,18 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                     logger.info("Appending training data...")
                     datalist.append(tframe)
                 elif loadfrom.strip().lower() == 'elastic':
-                    X_split = np.array_split(tframe, 50)
+                    X_split = np.array_split(tframe, 100)
                     logger.info("loading history data from elastic...")
                     logger.info("Len of X_split for batch load: %d", len(X_split))
                     logger.info("Appending history data...")
-                    
+
                     for ix in range(len(X_split)):
                         lhistory = list(X_split[ix]["user_id"].map(str) + "_" + X_split[ix]["topic_id"].map(str))
                         logger.info("call %d history data...", len(lhistory))
                         inside_data = mh.loadESHistory(lhistory, es,
-                                                       esindex_name='fitted_hist_index',
-                                                       estype_name='fitted_hist_type')
-                        
+                                                       esindex_name='topicrecommendation_fitted_hist_index',
+                                                       estype_name='topicrecommendation_fitted_hist_type')
+
                         if inside_data is not None:
                             # split back the user_id and topic_id
                             inside_data[['user_id','topic_id']] = inside_data.uid_topid.str.split('_', expand=True)
@@ -444,7 +278,7 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
                             del inside_data
                         else:
                             logger.info("inside_data is None...")
-                    
+
                     logger.info("Appending training data...")
                     datalist.append(tframe)
                 else:
@@ -457,7 +291,7 @@ def BQPreprocess(cpu, date_generated, client, query_fit, loadfrom="elastic"):
 
     return datalist, datalist_hist
 
-@profile
+
 def preprocess(cpu, cd, query_fit, date_generated):
     bq_client = bigquery.Client()
     job_config = bigquery.QueryJobConfig()
@@ -486,7 +320,7 @@ def preprocess(cpu, cd, query_fit, date_generated):
         logger.info("getting total: %d training data(current date interest)" % (len(current_frame)))
     else:
         logger.info("Collecting training data(current date interest) using argument: %s", cd)
-        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date) LIMIT 20000"
+        query_fit_where = "WHERE _PARTITIONTIME = TIMESTAMP(@start_date)"
 
         # safe handling of query parameter
         query_params = [
@@ -542,6 +376,11 @@ if __name__ == "__main__":
     # ~ made N fix ~
     N = 1
 
+    # default value for elastic host and port,
+    #  otherwise, overwrite on settings.json
+    elastic_host = "10.23.255.51"
+    elastic_port = 9200
+
     if args.ids:
         if not args.isn:
             # file setting should be in json format
@@ -562,7 +401,8 @@ if __name__ == "__main__":
                     """ + fit_table['uid_columnname'] + """ as user_id,
                     """ + fit_table['topid_columnname'] + """ as topic_id,
                     """ + fit_table['isgeneral_columnname'] + """ as is_general,
-                    """ + fit_table['topiccount_columnname'] + """ as num
+                    """ + fit_table['topiccount_columnname'] + """ as num,
+                    click_topic_name as topic_name
                     FROM `""" + fit_table['db_table_name'] + """`
                     """
 
@@ -570,15 +410,21 @@ if __name__ == "__main__":
                     """ + transform_table['uid_columnname'] + """ as user_id,
                     """ + transform_table['topid_columnname'] + """ as topic_id,
                     """ + transform_table['isgeneral_columnname'] + """ as is_general,
-                    """ + transform_table['topiccount_columnname'] + """ as num
+                    """ + transform_table['topiccount_columnname'] + """ as num,
+                    click_topic_name as topic_name
                     FROM `""" + transform_table['db_table_name'] + """` CDH
-                    LIMIT 20000
                     """
 
-        project_id = config["project_id"]
-        
-        G = config["G"]
-        T = config["threshold"]
+                project_id = config["project_id"]
+
+                G = config["G"]
+                T = config["threshold"]
+
+                # elastic settings
+                logger.info("overwrites ES main settings using settings.json !!")
+                es_settings = config["elastic_settings"]
+                elastic_host = es_settings['host']
+                elastic_port = es_settings['port']
     else:
         project_id = args.p  # assign bigquery project id
         G = args.G
@@ -587,7 +433,8 @@ if __name__ == "__main__":
                             click_user_alias_id as user_id,
                             click_topic_id as topic_id,
                             click_topic_is_general as is_general,
-                            click_topic_count as num
+                            click_topic_count as num,
+                            click_topic_name as topic_name
                         FROM `kumparan-data.topic_recommender.click_distribution_daily`
                     """
 
@@ -595,14 +442,50 @@ if __name__ == "__main__":
                             SELECT click_user_alias_id as user_id,
                               click_topic_id as topic_id,
                               click_topic_is_general as is_general,
-                              click_topic_count as num
+                              click_topic_count as num,
+                              click_topic_name as topic_name
                             FROM `kumparan-data.topic_recommender.click_distribution_hourly` CDH
-                            LIMIT 20000
                           """
 
     if G <= 0:
         logger.DEBUG("G cannot smaller or equal to 0...")
         sys.exit()
+
+    # ~~~ create elastic index for fallback data ~~~
+    logger.info("ElasticSearch host: %s", elastic_host)
+    logger.info("ElasticSearch port: %s", elastic_port)
+
+    es = Elasticsearch([elastic_host], port=elastic_port)
+    esp = Espandas(hosts=[elastic_host], port=elastic_port)
+
+    logger.info("Checking topicrecommendation_transform_fallback_index availability...")
+    index_name = "topicrecommendation_transform_fallback_index"
+    is_index_exist = es.indices.exists(index=index_name)
+
+    request_body_fb = {
+        "settings" : {
+            "number_of_shards": 2,
+            "number_of_replicas": 1
+        },
+        "mappings" : {
+            "topicrecommendation_transform_fallback_type" : {
+                "properties" : {
+                    "topid": {"type": "keyword" },
+                    "topic_name": {"type": "text" },
+                    "interest_score": {"type": "double" }
+                }
+            }
+        }
+    }
+
+    # Create the index
+    if not is_index_exist:
+        logger.info("topicrecommendation_transform_fallback_index is Not available !!")
+        es.indices.create(index=index_name, body=request_body_fb)
+        logger.info("topicrecommendation_transform_fallback_index Created.")
+    else:
+        logger.info("topicrecommendation_transform_fallback_index existance is %s", str(is_index_exist))
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # ~~~ Generate date range for training set ~~~
     logger.info("Generating date range with N: %d", N)
@@ -619,7 +502,6 @@ if __name__ == "__main__":
     end = date_1_days_ago
     date_generated = [start + datetime.timedelta(days=x) for x in range(0, (end - start).days)]
     date_generated.append(date_1_days_ago)
-    print "date_generated: ", date_generated
     logger.info("using current date: %s", str_datecurrent)
     logger.info("using start date: %s", start)
     logger.info("using end date: %s", date_1_days_ago.strftime('%Y-%m-%d'))
@@ -636,7 +518,7 @@ if __name__ == "__main__":
             G, project_id, savetrain=args.savetrain,
             multproc=args.savemp, threshold=T,
             start_date=None, end_date=None, saveto=args.storage,
-            fitted_models_hist=big_frame_hist)
-        logger.info("~~~~~~~~~~~~~~ All Legacy Train operation is complete ~~~~~~~~~~~~~~~~~")
+            fitted_models_hist=big_frame_hist, esp=esp)
+        logger.info("~~~~~~~~~~~~~~ All Daily Train operation is complete ~~~~~~~~~~~~~~~~~")
     else:
         logger.info("Train return False, please cek your data availability")

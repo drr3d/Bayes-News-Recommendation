@@ -1,1 +1,0 @@
-A.P.I Service as intermediary on handling trained data to Front End

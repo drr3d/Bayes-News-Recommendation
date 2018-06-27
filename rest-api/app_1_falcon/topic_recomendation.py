@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
 import falcon, time, json, datetime, re, pandas as pd, google.cloud.exceptions, sys
 
 from elasticsearch import Elasticsearch, RequestsHttpConnection
@@ -193,11 +190,29 @@ class TopicRecomendationResourceElasticSearch(object):
     """
 
     def __init__(self):
-        self.index = 'transform_index'
-        self.type = 'transform_type'
-        self.connection = ElasticSearchAPITest()
-        self.es = self.connection._es_connection_gcp(Elasticsearch)
-        self.normalize = Normalize()
+        # self.index = 'topic_recomendations'
+        # self.type = 'topic_recomendation'
+        # self.connection = ElasticSearchAPI()
+        # self.es = self.connection._es_connection_aws_server(Elasticsearch, RequestsHttpConnection)
+
+        self.index = 'topic_reco'
+        self.type = 'user_topic'
+        # self.connection = ElasticSearchAPITest()
+        self.es = self._es_connection_gcp(Elasticsearch)
+        # self.normalize = Normalize()
+
+    def _es_connection_gcp(self, Elasticsearch):
+        """
+            * This function handle connection to AWS Elastic Search server
+            * To use it :
+                1. open terminal then ssh to 'ssh -p 5858 ec2-user@52.220.149.211 -D3333'
+                2. then open terminal again in new tab, ssh again to : 'ssh -o ProxyCommand='nc -x 127.0.0.1:3333 %h %p' -lroot admin@10.0.1.101'
+                3. set proxy to localhost:3333
+                4. then you can use the elastic search
+        """
+
+        es = Elasticsearch("35.198.229.68:9200")
+        return es
 
     def _list(self):
         ''' Handling task for get all entities data from elastic search '''

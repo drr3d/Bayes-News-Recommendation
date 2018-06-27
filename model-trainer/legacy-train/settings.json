@@ -1,8 +1,8 @@
 {
     "project_id":"kumparan-data",
     "G":10,
-    "N":25,
-    "threshold":10,
+    "N":23,
+    "threshold":15,
     "fit_dbtable":{
         "db_table_name":"kumparan-data.topic_recommender.click_distribution_daily",
         "date_columnname":"_PARTITIONTIME",

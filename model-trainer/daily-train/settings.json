@@ -1,6 +1,7 @@
 {
     "project_id":"kumparan-data",
     "G":10,
+    "N":1,
     "threshold":15,
     "fit_dbtable":{
         "db_table_name":"kumparan-data.topic_recommender.click_distribution_daily",
@@ -16,5 +17,9 @@
         "topid_columnname":"click_topic_id",
         "isgeneral_columnname":"click_topic_is_general",
         "topiccount_columnname":"click_topic_count"
+    },
+    "elastic_settings":{
+        "host":"10.23.255.51",
+        "port":9200
     }
 }

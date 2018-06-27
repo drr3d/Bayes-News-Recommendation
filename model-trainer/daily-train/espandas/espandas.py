@@ -19,6 +19,7 @@ import pandas as pd
 import numpy as np
 import ujson as json
 import logging
+import sys
 
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.exceptions import NotFoundError
@@ -112,17 +113,7 @@ class Espandas(object):
         df = df.reindex(sorted(df.columns), axis=1).copy()
         logger.info("reindex using %.3f percent memory...", psutil.virtual_memory().percent)
 
-        """
-        data = ({'_op_type': 'update'
-                 '_index': index,
-                 '_type': doc_type,
-                 '_id': record[index_name],
-                 'doc': {x: record[x] for x in record if x not in {index_name}},
-                 'doc_as_upsert': True}
-                for record in generate_dict(df))
-        logger.info("doc_as_upsert is True !!")
-        """
-
+        
         data = ({'_op_type': 'update',
                  '_index': index,
                  '_type': doc_type,
@@ -131,7 +122,11 @@ class Espandas(object):
                  'doc_as_upsert': True}
                 for record in generate_dict(df))
         logger.info("doc_as_upsert is True ~ Modified version + using op_type(update) !!")
-        print list(data)[:3]
+        
         del df
         logger.info("final espandas, using %.3f percent memory...", psutil.virtual_memory().percent)
-        helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+        try:
+            helpers.bulk(self.client, data, chunk_size=chunksize, request_timeout=rto)
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            pass
