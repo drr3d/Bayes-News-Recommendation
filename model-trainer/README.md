@@ -117,10 +117,10 @@ ini mempermudah mencari bug
 # Some usefull link:
 * [stackoverflow-1](https://stackoverflow.com/questions/45697327/load-large-data-from-bigquery-to-python)
 
-[github](https://github.com/GoogleCloudPlatform/nodejs-docs-samples/issues/117 "github")
+* [github](https://github.com/GoogleCloudPlatform/nodejs-docs-samples/issues/117 "github")
 
-[itprotoday](http://www.itprotoday.com/management-mobility/powershell-one-liner-getting-local-environment-variables "itprotoday")
+* [itprotoday](http://www.itprotoday.com/management-mobility/powershell-one-liner-getting-local-environment-variables "itprotoday")
 
-[stackoverflow-1](https://stackoverflow.com/questions/39978077/gcloud-exceptions-forbidden-403-missing-or-insufficient-permissions "stackoverflow-1")
+* [stackoverflow-1](https://stackoverflow.com/questions/39978077/gcloud-exceptions-forbidden-403-missing-or-insufficient-permissions "stackoverflow-1")
 
-[stackoverflow-2](https://stackoverflow.com/questions/47671717/google-api-core-exceptions-forbidden-403-missing-or-insufficient-permissions "stackoverflow-2")
+* [stackoverflow-2](https://stackoverflow.com/questions/47671717/google-api-core-exceptions-forbidden-403-missing-or-insufficient-permissions "stackoverflow-2")
